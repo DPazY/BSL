@@ -2,7 +2,6 @@
 using BSL.Models;
 using FluentAssertions;
 using Moq;
-using System.Text.RegularExpressions;
 
 namespace BSL.Test
 {
@@ -64,6 +63,16 @@ namespace BSL.Test
 
             result1.Should().BeEquivalentTo(new[] { books[0], books[1] });
             result2.Should().BeEquivalentTo(new[] { books[1], books[2] });
+        }
+        [Test]
+        [TestCase("Идиот")]
+        [TestCase("Песнь Льда и Пламени")]
+        public void SearchByName_ReturnBookList(string name)
+        {
+            IBookService bookService = new BookService(GetBookRepositoryMoq(books).Object);
+            IEnumerable<Book> result = bookService.SearchByName(name);
+
+            result.Should().BeEquivalentTo(books.Where(b => b.Name == name));
         }
     }
 }

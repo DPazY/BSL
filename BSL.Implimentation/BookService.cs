@@ -37,5 +37,10 @@ namespace BSL.Implimentation
             return _bookRepository.GetAll().Where(b => Regex.IsMatch(b.PublisherBook,
                 $@"^{pattern}", RegexOptions.IgnoreCase)).OrderBy(b => b.PublisherBook);
         }
+
+        public IEnumerable<Book> SearchByName(string name)
+        {
+            return _bookRepository.GetAll().Where(b => b.Name == name);
+        }
     }
 }

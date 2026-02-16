@@ -61,4 +61,15 @@ public class PatentServiceTest
             ? patents.OrderBy(newspaper => newspaper.PublicationDate.Year)
             : patents.OrderByDescending(newspaper => newspaper.PublicationDate.Year));
     }
+
+    [Test]
+    [TestCase("The New York Times")]
+    [TestCase("Комсомольская правда")]
+    public void SearchByName_ReturnNewspaperList(string name)
+    {
+        IPatentService patentService = new PatentService(GetPatentRepositoryMoq(patents).Object);
+        IEnumerable<Patent> result = patentService.SearchByName(name);
+
+        result.Should().BeEquivalentTo(patents.Where(b => b.Name == name));
+    }
 }
