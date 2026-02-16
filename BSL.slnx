@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="BSL.Implimentation/BSL.Implimentation.csproj" Id="f8e640e1-4dee-48e5-b698-a4845eb80ca4" />
+  <Project Path="BSL.Models/BSL.Models.csproj" Id="483e08f9-7d0c-4302-ad3e-ae9f99e53620" />
+  <Project Path="BSL.Test/BSL.Test.csproj" />
+</Solution>
