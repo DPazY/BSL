@@ -15,8 +15,8 @@ namespace BSL.Implimentation
         {
             return orderBy switch
             {
-                OrderBy.Asc => _newspaperRepository.GetAll().OrderBy(b => b.Year),
-                OrderBy.Desc => _newspaperRepository.GetAll().OrderByDescending(b => b.Year),
+                OrderBy.Asc => _newspaperRepository.GetAll().OrderBy(b => b.DataPublishing.Year),
+                OrderBy.Desc => _newspaperRepository.GetAll().OrderByDescending(b => b.DataPublishing.Year),
                 _ => _newspaperRepository.GetAll()
             };
         }

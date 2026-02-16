@@ -41,8 +41,8 @@ namespace BSL.Test
             IBookService bookService = new BookService(GetBookRepositoryMoq(books).Object);
             IEnumerable<Book> result = bookService.GetAll(OrderBy.Asc);
             result.Should().BeEquivalentTo(orderBy == OrderBy.Asc
-                ? books.OrderBy(book => book.Year)
-                : books.OrderByDescending(book => book.Year));
+                ? books.OrderBy(book => book.YearBook)
+                : books.OrderByDescending(book => book.YearBook));
         }
 
         [Test]

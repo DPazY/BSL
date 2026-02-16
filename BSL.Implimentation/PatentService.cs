@@ -2,7 +2,7 @@
 
 namespace BSL.Implimentation
 {
-    public class PatentService
+    public class PatentService : IPatentService
     {
         private readonly IRepository<Patent> _patentRepository;
 
