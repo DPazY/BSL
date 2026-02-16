@@ -1,15 +1,11 @@
-﻿namespace BSL.Models
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace BSL.Models
 {
     public record class Patent : Editions
     {
-        public string Inventor { get; private set; }
-        public string Country { get; private set; }
-        public string RegistrationNumber { get; private set; }
-        public DateOnly SubmissionDate { get; private set; }
-        public DateOnly PublicationDate { get; private set; }
-        public int NumberOfPages { get; private set; }
-        public string? Notes { get; private set; }
-
         public Patent(
             string name,
             string inventor,
@@ -17,8 +13,8 @@
             string registrationNumber,
             DateOnly submissionDate,
             DateOnly publicationDate,
-            int numberOfPages,
-            string? notes) : base(name)
+            int? numberOfPages = null,
+            string? notes = null) : base(name)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Название патента не может быть пустым", nameof(name));
@@ -34,21 +30,26 @@
             RegistrationNumber = registrationNumber ?? throw new ArgumentNullException(nameof(registrationNumber));
 
             if (submissionDate.Year < 1950)
-                throw new ArgumentOutOfRangeException(nameof(submissionDate), "Дата подачи заявки не может быть ранее 1950 года");
+                throw new ArgumentOutOfRangeException(nameof(submissionDate), "Дата подачи заявки не может быть earlier 1950 года");
             SubmissionDate = submissionDate;
 
             if (publicationDate.Year < 1950)
-                throw new ArgumentOutOfRangeException(nameof(publicationDate), "Дата публикации не может быть ранее 1950 года");
+                throw new ArgumentOutOfRangeException(nameof(publicationDate), "Дата публикации не может быть earlier 1950 года");
             PublicationDate = publicationDate;
 
             if (publicationDate < submissionDate)
                 throw new ArgumentException("Дата публикации не может быть раньше даты подачи заявки");
 
-            if (numberOfPages <= 0)
-                throw new ArgumentOutOfRangeException(nameof(numberOfPages), "Количество страниц должно быть больше 0");
-            NumberOfPages = numberOfPages;
-
+            NumberOfPages = numberOfPages ?? 0;
             Notes = notes;
         }
+
+        public string Inventor { get; init; }
+        public string Country { get; init; }
+        public string RegistrationNumber { get; init; }
+        public DateOnly SubmissionDate { get; init; }
+        public DateOnly PublicationDate { get; init; }
+        public int? NumberOfPages { get; init; }
+        public string? Notes { get; init; }
     }
 }
