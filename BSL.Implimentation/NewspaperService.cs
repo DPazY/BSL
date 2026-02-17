@@ -20,10 +20,5 @@ namespace BSL.Implimentation
                 _ => _newspaperRepository.GetAll()
             };
         }
-
-        public IEnumerable<Newspaper> SearchByName(string name)
-        {
-            return _newspaperRepository.GetAll().Where(b => b.Name == name);
-        }
     }
 }

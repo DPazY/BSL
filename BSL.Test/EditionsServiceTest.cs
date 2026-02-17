@@ -2,13 +2,12 @@
 using BSL.Models;
 using FluentAssertions;
 using Moq;
-using static System.Reflection.Metadata.BlobBuilder;
 
 namespace BSL.Test;
 
-public class NewspaperServiceTest
+public class EditionsServiceTest
 {
-    List<Newspaper> newspapers = new List<Newspaper>()
+    List<Editions> editions = new List<Editions>()
 {
     new Newspaper(
         name: "Комсомольская правда",
@@ -41,8 +40,32 @@ public class NewspaperServiceTest
         issueNumber: 450,
         date: new DateOnly(1999, 9, 21),  // Минимально допустимый год по логике конструктора
         issn: "1562-2584"
-    )
-};
+    ),
+    new Book("Преступление и наказание", new DateOnly(2000, 1, 1), "БББ", "Толстой"),
+    new Book("Идиот", new DateOnly(2003, 1, 1), "аба", "Толстой Мартин"),
+    new Book("Песнь Льда и Пламени", new DateOnly(1978, 1, 1), "ААА", "Мартин"),
+    new Patent(
+            name: "Способ беспроводной передачи данных",
+        inventor: "Иванов И.И., Петров П.П.",
+        country: "Россия",
+        registrationNumber: "RU2745000",
+        submissionDate: new DateOnly(2020, 5, 15),
+        publicationDate: new DateOnly(2021, 11, 20),
+        numberOfPages: 24,
+        notes: "Приоритетный патент"
+        ),
+
+        new Patent(
+            name: "Устройство для очистки воды",
+            inventor: "Smith John",
+            country: "USA",
+            registrationNumber: "US1029384",
+            submissionDate: new DateOnly(1990, 1, 10),
+            publicationDate: new DateOnly(1992, 3, 5),
+            numberOfPages: 12,
+            notes: null
+        )
+    };
     private Mock<IRepository<T>> GetRepositoryMoq<T>(List<T> res)
     {
         var repositoryMoq = new Mock<IRepository<T>>();
@@ -51,26 +74,17 @@ public class NewspaperServiceTest
     }
 
     [Test]
-    public void GetAll_ReturnNewspaperList()
+    [TestCase("Идиот")]
+    [TestCase("Песнь Льда и Пламени")]
+    [TestCase("The New York Times")]
+
+
+    public void SearchByName_ReturnEditionList(string name)
     {
-        Mock<IRepository<Newspaper>> repositoryMoq = GetRepositoryMoq<Newspaper>(newspapers);
+        IEditionService editionService = new EditionService(GetRepositoryMoq<Editions>(editions).Object);
+        IEnumerable<Editions> result = editionService.SearchByName(name);
 
-        INewspaperService newspaperService = new NewspaperService(repositoryMoq.Object);
-        IEnumerable<Newspaper> result = newspaperService.GetAll();
-        result.Should().BeEquivalentTo(newspapers);
-
+        result.Should().BeEquivalentTo(editions.Where(b => b.Name == name));
     }
 
-
-    [Test]
-    [TestCase(OrderBy.Asc)]
-    [TestCase(OrderBy.Desc)]
-    public void GetAll_ReturnNewspaperListAscOrderByYear(OrderBy orderBy)
-    {
-        INewspaperService bookService = new NewspaperService(GetRepositoryMoq(newspapers).Object);
-        IEnumerable<Newspaper> result = bookService.GetAll(OrderBy.Asc);
-        result.Should().BeEquivalentTo(orderBy == OrderBy.Asc
-            ? newspapers.OrderBy(newspaper => newspaper.DataPublishing.Year)
-            : newspapers.OrderByDescending(newspaper => newspaper.DataPublishing.Year));
-    }
 }

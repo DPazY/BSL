@@ -20,10 +20,5 @@ namespace BSL.Implimentation
                 _ => _patentRepository.GetAll()
             };
         }
-
-        public IEnumerable<Patent> SearchByName(string name)
-        {
-            return _patentRepository.GetAll().Where(b => b.Name == name);
-        }
     }
 }

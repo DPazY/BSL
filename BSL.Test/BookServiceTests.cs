@@ -13,7 +13,7 @@ namespace BSL.Test
                 new("Идиот", new DateOnly(2003, 1, 1), "аба", "Толстой Мартин"),
                 new("Песнь Льда и Пламени", new DateOnly(1978, 1, 1), "ААА", "Мартин")
             };
-        private Mock<IRepository<T>> GetBookRepositoryMoq<T>(List<T> res)
+        private Mock<IRepository<T>> GetRepositoryMoq<T>(List<T> res)
         {
             var repositoryMoq = new Mock<IRepository<T>>();
             repositoryMoq.Setup(repos => repos.GetAll()).Returns(res);
@@ -23,7 +23,7 @@ namespace BSL.Test
         [Test]
         public void GetAll_ReturnBookList()
         {
-            Mock<IRepository<Book>> repositoryMoq = GetBookRepositoryMoq(books);
+            Mock<IRepository<Book>> repositoryMoq = GetRepositoryMoq(books);
 
             IBookService bookService = new BookService(repositoryMoq.Object);
             IEnumerable<Book> result = bookService.GetAll();
@@ -37,7 +37,7 @@ namespace BSL.Test
         [TestCase(OrderBy.Desc)]
         public void GetAll_ReturnBookListAscOrderByYear(OrderBy orderBy)
         {
-            IBookService bookService = new BookService(GetBookRepositoryMoq(books).Object);
+            IBookService bookService = new BookService(GetRepositoryMoq(books).Object);
             IEnumerable<Book> result = bookService.GetAll(OrderBy.Asc);
             result.Should().BeEquivalentTo(orderBy == OrderBy.Asc
                 ? books.OrderBy(book => book.YearBook)
@@ -47,7 +47,7 @@ namespace BSL.Test
         [Test]
         public void GetAllWherePublisherStarts_ReturnBookListStartWithPatternOrderByAsc()
         {
-            IBookService bookService = new BookService(GetBookRepositoryMoq(books).Object);
+            IBookService bookService = new BookService(GetRepositoryMoq(books).Object);
             IEnumerable<Book> result1 = bookService.GetAllWherePublisherStarts("а");
             IEnumerable<Book> result2 = bookService.GetAllWherePublisherStarts("аб");
 
@@ -57,22 +57,12 @@ namespace BSL.Test
         [Test]
         public void GetAllAuthors_ReturnBookList()
         {
-            IBookService bookService = new BookService(GetBookRepositoryMoq(books).Object);
+            IBookService bookService = new BookService(GetRepositoryMoq(books).Object);
             IEnumerable<Book> result1 = bookService.GetAllByAuthor("Толстой");
             IEnumerable<Book> result2 = bookService.GetAllByAuthor("Мартин");
 
             result1.Should().BeEquivalentTo(new[] { books[0], books[1] });
             result2.Should().BeEquivalentTo(new[] { books[1], books[2] });
-        }
-        [Test]
-        [TestCase("Идиот")]
-        [TestCase("Песнь Льда и Пламени")]
-        public void SearchByName_ReturnBookList(string name)
-        {
-            IBookService bookService = new BookService(GetBookRepositoryMoq(books).Object);
-            IEnumerable<Book> result = bookService.SearchByName(name);
-
-            result.Should().BeEquivalentTo(books.Where(b => b.Name == name));
         }
     }
 }

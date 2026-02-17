@@ -39,7 +39,7 @@ public class PatentServiceTest
     }
 
     [Test]
-    public void GetAll_ReturnBookList()
+    public void GetAll_ReturnPatentList()
     {
         Mock<IRepository<Patent>> repositoryMoq = GetPatentRepositoryMoq<Patent>(patents);
 
@@ -53,23 +53,12 @@ public class PatentServiceTest
     [Test]
     [TestCase(OrderBy.Asc)]
     [TestCase(OrderBy.Desc)]
-    public void GetAll_ReturnBookListAscOrderByYear(OrderBy orderBy)
+    public void GetAll_ReturnPatentListAscOrderByYear(OrderBy orderBy)
     {
         IPatentService patentService = new PatentService(GetPatentRepositoryMoq<Patent>(patents).Object);
         IEnumerable<Patent> result = patentService.GetAll(OrderBy.Asc);
         result.Should().BeEquivalentTo(orderBy == OrderBy.Asc
             ? patents.OrderBy(newspaper => newspaper.PublicationDate.Year)
             : patents.OrderByDescending(newspaper => newspaper.PublicationDate.Year));
-    }
-
-    [Test]
-    [TestCase("The New York Times")]
-    [TestCase("Комсомольская правда")]
-    public void SearchByName_ReturnNewspaperList(string name)
-    {
-        IPatentService patentService = new PatentService(GetPatentRepositoryMoq(patents).Object);
-        IEnumerable<Patent> result = patentService.SearchByName(name);
-
-        result.Should().BeEquivalentTo(patents.Where(b => b.Name == name));
     }
 }
