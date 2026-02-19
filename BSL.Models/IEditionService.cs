@@ -2,7 +2,7 @@
 {
     public interface IEditionService
     {
-        public IEnumerable<Editions> SearchByName(string name);
+        public IEnumerable<Edition> SearchByName(string name);
     }
 
 }

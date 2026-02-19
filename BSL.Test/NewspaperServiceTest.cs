@@ -17,7 +17,7 @@ public class NewspaperServiceTest
         numberOfPages: 16,
         notes: "Ежедневная общественно-политическая газета",
         issueNumber: 15430,
-        date: new DateOnly(2023, 10, 5),  // Дата выпуска (должна быть >= 1950)
+        dataPublishing: new DateOnly(2023, 10, 5),  // Дата выпуска (должна быть >= 1950)
         issn: "0233-4399"
     ),
 
@@ -28,7 +28,7 @@ public class NewspaperServiceTest
         numberOfPages: 64,
         notes: null,                      // Пример nullable поля
         issueNumber: 58201,
-        date: new DateOnly(2003, 10, 5), // Еще один способ создания DateOnly
+        dataPublishing: new DateOnly(2003, 10, 5), // Еще один способ создания DateOnly
         issn: "0362-4331"
     ),
 
@@ -39,21 +39,21 @@ public class NewspaperServiceTest
         numberOfPages: 32,
         notes: "Деловая газета",
         issueNumber: 450,
-        date: new DateOnly(1999, 9, 21),  // Минимально допустимый год по логике конструктора
+        dataPublishing: new DateOnly(1999, 9, 21),  // Минимально допустимый год по логике конструктора
         issn: "1562-2584"
     )
 };
-    private Mock<IRepository<T>> GetRepositoryMoq<T>(List<T> res)
+    private Mock<IRepository> GetRepositoryMoq<T>(List<T> res)
     {
-        var repositoryMoq = new Mock<IRepository<T>>();
-        repositoryMoq.Setup(repos => repos.GetAll()).Returns(res);
+        var repositoryMoq = new Mock<IRepository>();
+        repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);
         return repositoryMoq;
     }
 
     [Test]
     public void GetAll_ReturnNewspaperList()
     {
-        Mock<IRepository<Newspaper>> repositoryMoq = GetRepositoryMoq<Newspaper>(newspapers);
+        Mock<IRepository> repositoryMoq = GetRepositoryMoq<Newspaper>(newspapers);
 
         INewspaperService newspaperService = new NewspaperService(repositoryMoq.Object);
         IEnumerable<Newspaper> result = newspaperService.GetAll();

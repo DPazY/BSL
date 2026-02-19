@@ -31,17 +31,17 @@ public class PatentServiceTest
             notes: null
         )
     };
-    private Mock<IRepository<T>> GetPatentRepositoryMoq<T>(List<T> res)
+    private Mock<IRepository> GetPatentRepositoryMoq<T>(List<T> res)
     {
-        var repositoryMoq = new Mock<IRepository<T>>();
-        repositoryMoq.Setup(repos => repos.GetAll()).Returns(res);
+        var repositoryMoq = new Mock<IRepository>();
+        repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);
         return repositoryMoq;
     }
 
     [Test]
     public void GetAll_ReturnPatentList()
     {
-        Mock<IRepository<Patent>> repositoryMoq = GetPatentRepositoryMoq<Patent>(patents);
+        Mock<IRepository> repositoryMoq = GetPatentRepositoryMoq<Patent>(patents);
 
         IPatentService patentService = new PatentService(repositoryMoq.Object);
         IEnumerable<Patent> result = patentService.GetAll();

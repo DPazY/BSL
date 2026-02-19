@@ -7,14 +7,14 @@ namespace BSL.Implimentation
 {
     public class EditionService : IEditionService
     {
-        private readonly IRepository<Editions> _editionRepository;
+        private readonly IRepository _editionRepository;
 
-        public EditionService(IRepository<Editions> editionRepository)
+        public EditionService(IRepository editionRepository)
         {
             this._editionRepository = editionRepository;
         }
 
-        public IEnumerable<Editions> SearchByName(string name) => _editionRepository.GetAll().Where(e => e.Name == name);
+        public IEnumerable<Edition> SearchByName(string name) => _editionRepository.GetAll<Edition>().Where(e => e.Name == name);
         
     }
 }

@@ -13,17 +13,17 @@ namespace BSL.Test
                 new("Идиот", new DateOnly(2003, 1, 1), "аба", "Толстой Мартин"),
                 new("Песнь Льда и Пламени", new DateOnly(1978, 1, 1), "ААА", "Мартин")
             };
-        private Mock<IRepository<T>> GetRepositoryMoq<T>(List<T> res)
+        private Mock<IRepository> GetRepositoryMoq<T>(List<T> res)
         {
-            var repositoryMoq = new Mock<IRepository<T>>();
-            repositoryMoq.Setup(repos => repos.GetAll()).Returns(res);
+            var repositoryMoq = new Mock<IRepository>();
+            repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);
             return repositoryMoq;
         }
 
         [Test]
         public void GetAll_ReturnBookList()
         {
-            Mock<IRepository<Book>> repositoryMoq = GetRepositoryMoq(books);
+            Mock<IRepository> repositoryMoq = GetRepositoryMoq(books);
 
             IBookService bookService = new BookService(repositoryMoq.Object);
             IEnumerable<Book> result = bookService.GetAll();

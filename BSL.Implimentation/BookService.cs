@@ -5,9 +5,9 @@ namespace BSL.Implimentation
 {
     public class BookService : IBookService
     {
-        private readonly IRepository<Book> _bookRepository;
+        private readonly IRepository _bookRepository;
 
-        public BookService(IRepository<Book> bookRepository)
+        public BookService(IRepository bookRepository)
         {
             _bookRepository = bookRepository;
         }
@@ -16,9 +16,9 @@ namespace BSL.Implimentation
         {
             return orderBy switch
             {
-                OrderBy.Asc => _bookRepository.GetAll().OrderBy(b => b.YearBook),
-                OrderBy.Desc => _bookRepository.GetAll().OrderByDescending(b => b.YearBook),
-                _ => _bookRepository.GetAll()
+                OrderBy.Asc => _bookRepository.GetAll<Book>().OrderBy(b => b.YearBook),
+                OrderBy.Desc => _bookRepository.GetAll<Book>().OrderByDescending(b => b.YearBook),
+                _ => _bookRepository.GetAll<Book>()
             };
         }
 
@@ -26,15 +26,15 @@ namespace BSL.Implimentation
         {
             if (!string.IsNullOrEmpty(author))
             {
-                return _bookRepository.GetAll().Where(b => b.Author.Contains(author));
+                return _bookRepository.GetAll<Book>().Where(b => b.Author.Contains(author));
                 
             }
-            else return _bookRepository.GetAll();
+            else return _bookRepository.GetAll<Book>();
         }
 
         public IEnumerable<Book> GetAllWherePublisherStarts(string pattern)
         {
-            return _bookRepository.GetAll().Where(b => Regex.IsMatch(b.PublisherBook,
+            return _bookRepository.GetAll<Book>().Where(b => Regex.IsMatch(b.PublisherBook,
                 $@"^{pattern}", RegexOptions.IgnoreCase)).OrderBy(b => b.PublisherBook);
         }
     }

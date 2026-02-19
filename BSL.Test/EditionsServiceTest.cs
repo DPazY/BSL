@@ -7,7 +7,7 @@ namespace BSL.Test;
 
 public class EditionsServiceTest
 {
-    List<Editions> editions = new List<Editions>()
+    List<Edition> editions = new List<Edition>()
 {
     new Newspaper(
         name: "Комсомольская правда",
@@ -16,7 +16,7 @@ public class EditionsServiceTest
         numberOfPages: 16,
         notes: "Ежедневная общественно-политическая газета",
         issueNumber: 15430,
-        date: new DateOnly(2023, 10, 5),  // Дата выпуска (должна быть >= 1950)
+        dataPublishing: new DateOnly(2023, 10, 5),
         issn: "0233-4399"
     ),
 
@@ -25,9 +25,9 @@ public class EditionsServiceTest
         placeOfPublication: "Нью-Йорк, США",
         publishingHouse: "The New York Times Company",
         numberOfPages: 64,
-        notes: null,                      // Пример nullable поля
+        notes: null,                     
         issueNumber: 58201,
-        date: new DateOnly(2003, 10, 5), // Еще один способ создания DateOnly
+        dataPublishing: new DateOnly(2003, 10, 5), 
         issn: "0362-4331"
     ),
 
@@ -38,7 +38,7 @@ public class EditionsServiceTest
         numberOfPages: 32,
         notes: "Деловая газета",
         issueNumber: 450,
-        date: new DateOnly(1999, 9, 21),  // Минимально допустимый год по логике конструктора
+        dataPublishing: new DateOnly(1999, 9, 21), 
         issn: "1562-2584"
     ),
     new Book("Преступление и наказание", new DateOnly(2000, 1, 1), "БББ", "Толстой"),
@@ -66,10 +66,10 @@ public class EditionsServiceTest
             notes: null
         )
     };
-    private Mock<IRepository<T>> GetRepositoryMoq<T>(List<T> res)
+    private Mock<IRepository> GetRepositoryMoq<T>(List<T> res)
     {
-        var repositoryMoq = new Mock<IRepository<T>>();
-        repositoryMoq.Setup(repos => repos.GetAll()).Returns(res);
+        var repositoryMoq = new Mock<IRepository>();
+        repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);
         return repositoryMoq;
     }
 
@@ -81,8 +81,8 @@ public class EditionsServiceTest
 
     public void SearchByName_ReturnEditionList(string name)
     {
-        IEditionService editionService = new EditionService(GetRepositoryMoq<Editions>(editions).Object);
-        IEnumerable<Editions> result = editionService.SearchByName(name);
+        IEditionService editionService = new EditionService(GetRepositoryMoq<Edition>(editions).Object);
+        IEnumerable<Edition> result = editionService.SearchByName(name);
 
         result.Should().BeEquivalentTo(editions.Where(b => b.Name == name));
     }

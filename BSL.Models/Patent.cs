@@ -1,6 +1,6 @@
 ﻿namespace BSL.Models
 {
-    public record class Patent : Editions
+    public record class Patent : Edition
     {
         public string Inventor { get; private set; }
         public string Country { get; private set; }

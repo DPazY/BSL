@@ -4,9 +4,9 @@ namespace BSL.Implimentation
 {
     public class PatentService : IPatentService
     {
-        private readonly IRepository<Patent> _patentRepository;
+        private readonly IRepository _patentRepository;
 
-        public PatentService(IRepository<Patent> patentRepository)
+        public PatentService(IRepository patentRepository)
         {
             _patentRepository = patentRepository;
         }
@@ -15,9 +15,9 @@ namespace BSL.Implimentation
         {
             return orderBy switch
             {
-                OrderBy.Asc => _patentRepository.GetAll().OrderBy(b => b.PublicationDate),
-                OrderBy.Desc => _patentRepository.GetAll().OrderByDescending(b => b.PublicationDate),
-                _ => _patentRepository.GetAll()
+                OrderBy.Asc => _patentRepository.GetAll<Patent>().OrderBy(b => b.PublicationDate),
+                OrderBy.Desc => _patentRepository.GetAll<Patent>().OrderByDescending(b => b.PublicationDate),
+                _ => _patentRepository.GetAll<Patent>()
             };
         }
     }

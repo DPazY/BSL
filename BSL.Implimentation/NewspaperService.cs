@@ -4,9 +4,9 @@ namespace BSL.Implimentation
 {
     public class NewspaperService : INewspaperService
     {
-        private readonly IRepository<Newspaper> _newspaperRepository;
+        private readonly IRepository _newspaperRepository;
 
-        public NewspaperService(IRepository<Newspaper> newspaperRepository)
+        public NewspaperService(IRepository newspaperRepository)
         {
             _newspaperRepository = newspaperRepository;
         }
@@ -15,9 +15,9 @@ namespace BSL.Implimentation
         {
             return orderBy switch
             {
-                OrderBy.Asc => _newspaperRepository.GetAll().OrderBy(b => b.DataPublishing.Year),
-                OrderBy.Desc => _newspaperRepository.GetAll().OrderByDescending(b => b.DataPublishing.Year),
-                _ => _newspaperRepository.GetAll()
+                OrderBy.Asc => _newspaperRepository.GetAll<Newspaper>().OrderBy(b => b.DataPublishing.Year),
+                OrderBy.Desc => _newspaperRepository.GetAll<Newspaper>().OrderByDescending(b => b.DataPublishing.Year),
+                _ => _newspaperRepository.GetAll<Newspaper>()
             };
         }
     }

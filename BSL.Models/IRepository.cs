@@ -1,8 +1,11 @@
 ﻿namespace BSL.Models
 {
 
-    public interface IRepository<T>
+    public interface IRepository
     {
-        IEnumerable<T> GetAll();
+        IEnumerable<T> GetAll<T>();
+        void Add<T>(IEnumerable<T> editons);
+        void Remove<T>(IEnumerable<T> editons);
+
     }
 }

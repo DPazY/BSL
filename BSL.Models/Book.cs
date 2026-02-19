@@ -4,7 +4,7 @@ using System.Text;
 
 namespace BSL.Models
 {
-    public record class Book : Editions
+    public record class Book : Edition
     {
         public Book(string name, DateOnly year, string publisher, string author) : base(name)
         {

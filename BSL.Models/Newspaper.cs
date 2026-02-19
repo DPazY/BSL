@@ -4,7 +4,7 @@ using System.Text;
 
 namespace BSL.Models
 {
-    public record Newspaper : Editions
+    public record Newspaper : Edition
     {
         public string PlaceOfPublication { get; private set; }
         public string PublishingHouse { get; private set; }
@@ -14,14 +14,14 @@ namespace BSL.Models
         public DateOnly DataPublishing {  get; private set; }
         public string? ISSN { get; private set; }
 
-        public Newspaper(string name,string placeOfPublication, string publishingHouse, int numberOfPages, string? notes, int issueNumber, DateOnly date, string? issn) : base(name)
+        public Newspaper(string name,string placeOfPublication, string publishingHouse, int numberOfPages, string? notes, int issueNumber, DateOnly dataPublishing, string? issn) : base(name)
         {
             PlaceOfPublication = placeOfPublication;
             PublishingHouse = publishingHouse;
             NumberOfPages = numberOfPages;
             Notes = notes;
             IssueNumber = issueNumber;
-            if (date.Year >= 1950) DataPublishing = date;
+            if (dataPublishing.Year >= 1950) DataPublishing = dataPublishing;
             else throw new ArgumentOutOfRangeException();
             ISSN = issn;
         }
