@@ -7,13 +7,13 @@ namespace BSL.Models
 {
     public record Newspaper : Edition
     {
-        public string PlaceOfPublication { get; private set; }
-        public string PublishingHouse { get; private set; }
-        public int NumberOfPages { get; private set; }
-        public string? Notes { get; private set; }
-        public uint IssueNumber { get; private set; }
+        public string PlaceOfPublication { get; init; }
+        public string PublishingHouse { get; init; }
+        public int NumberOfPages { get; init; }
+        public string? Notes { get; init; }
+        public uint IssueNumber { get; init; }
         public required DateOnly DataPublishing {  get; init; }
-        public string? ISSN { get; private set; }
+        public string? ISSN { get; init; }
 
         [SetsRequiredMembers]
         public Newspaper(string name,string placeOfPublication, string publishingHouse, int numberOfPages, string? notes, uint issueNumber, DateOnly dataPublishing, string? issn) : base(name)

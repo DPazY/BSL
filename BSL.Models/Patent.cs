@@ -1,14 +1,14 @@
 ﻿namespace BSL.Models
 {
-    public record class Patent : Edition
+    public record Patent : Edition
     {
-        public string Inventor { get; private set; }
-        public string Country { get; private set; }
-        public string RegistrationNumber { get; private set; }
-        public DateOnly SubmissionDate { get; private set; }
-        public DateOnly PublicationDate { get; private set; }
-        public int NumberOfPages { get; private set; }
-        public string? Notes { get; private set; }
+        public required string Inventor { get; init; }
+        public required string Country { get; init; }
+        public string RegistrationNumber { get; init; }
+        public DateOnly SubmissionDate { get; init; }
+        public DateOnly PublicationDate { get; init; }
+        public uint NumberOfPages { get; init; }
+        public string? Notes { get; init; }
 
         public Patent(
             string name,
@@ -17,7 +17,7 @@
             string registrationNumber,
             DateOnly submissionDate,
             DateOnly publicationDate,
-            int numberOfPages,
+            uint numberOfPages,
             string? notes) : base(name)
         {
             if (string.IsNullOrWhiteSpace(name))

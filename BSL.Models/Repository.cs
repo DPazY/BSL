@@ -49,6 +49,7 @@ namespace BSL.Models
                 .Select(line => JsonSerializer.Deserialize<T>(line, _jsonOptions)!)
                 .ToList();
             var type = typeof(T);
+
             switch (type.Name)
             {
                 case "Newspaper":
@@ -65,6 +66,7 @@ namespace BSL.Models
                         break;
                 default: throw new NotSupportedException($"Тип {typeof(T).Name} не поддерживается");
             }
+
             return command;
         }
 

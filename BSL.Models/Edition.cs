@@ -1,6 +1,6 @@
 ﻿namespace BSL.Models
 {
-    public abstract record class Edition(string Name)
+    public abstract record Edition(string Name)
     {
     }
 }
