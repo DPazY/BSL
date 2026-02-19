@@ -7,7 +7,7 @@ namespace BSL.Implimentation
 {
     public class EditionService : IEditionService
     {
-        private readonly IRepository _editionRepository;
+        protected readonly IRepository _editionRepository;
 
         public EditionService(IRepository editionRepository)
         {

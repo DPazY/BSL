@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace BSL.Models
@@ -10,11 +11,12 @@ namespace BSL.Models
         public string PublishingHouse { get; private set; }
         public int NumberOfPages { get; private set; }
         public string? Notes { get; private set; }
-        public int IssueNumber { get; private set; }
-        public DateOnly DataPublishing {  get; private set; }
+        public uint IssueNumber { get; private set; }
+        public required DateOnly DataPublishing {  get; init; }
         public string? ISSN { get; private set; }
 
-        public Newspaper(string name,string placeOfPublication, string publishingHouse, int numberOfPages, string? notes, int issueNumber, DateOnly dataPublishing, string? issn) : base(name)
+        [SetsRequiredMembers]
+        public Newspaper(string name,string placeOfPublication, string publishingHouse, int numberOfPages, string? notes, uint issueNumber, DateOnly dataPublishing, string? issn) : base(name)
         {
             PlaceOfPublication = placeOfPublication;
             PublishingHouse = publishingHouse;

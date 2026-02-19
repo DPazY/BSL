@@ -3,22 +3,18 @@ using System.Text.RegularExpressions;
 
 namespace BSL.Implimentation
 {
-    public class BookService : IBookService
+    public class BookService : EditionService, IBookService
     {
-        private readonly IRepository _bookRepository;
-
-        public BookService(IRepository bookRepository)
-        {
-            _bookRepository = bookRepository;
-        }
+        public BookService(IRepository bookRepository) : base(bookRepository) { }
+        
 
         public IEnumerable<Book> GetAll(OrderBy? orderBy = null)
         {
             return orderBy switch
             {
-                OrderBy.Asc => _bookRepository.GetAll<Book>().OrderBy(b => b.YearBook),
-                OrderBy.Desc => _bookRepository.GetAll<Book>().OrderByDescending(b => b.YearBook),
-                _ => _bookRepository.GetAll<Book>()
+                OrderBy.Asc => _editionRepository.GetAll<Book>().OrderBy(b => b.YearBook),
+                OrderBy.Desc => _editionRepository.GetAll<Book>().OrderByDescending(b => b.YearBook),
+                _ => _editionRepository.GetAll<Book>()
             };
         }
 
@@ -26,15 +22,15 @@ namespace BSL.Implimentation
         {
             if (!string.IsNullOrEmpty(author))
             {
-                return _bookRepository.GetAll<Book>().Where(b => b.Author.Contains(author));
+                return _editionRepository.GetAll<Book>().Where(b => b.Author.Contains(author));
                 
             }
-            else return _bookRepository.GetAll<Book>();
+            else return _editionRepository.GetAll<Book>();
         }
 
         public IEnumerable<Book> GetAllWherePublisherStarts(string pattern)
         {
-            return _bookRepository.GetAll<Book>().Where(b => Regex.IsMatch(b.PublisherBook,
+            return _editionRepository.GetAll<Book>().Where(b => Regex.IsMatch(b.PublisherBook,
                 $@"^{pattern}", RegexOptions.IgnoreCase)).OrderBy(b => b.PublisherBook);
         }
     }
