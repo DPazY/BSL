@@ -1,4 +1,6 @@
-﻿namespace BSL.Models
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace BSL.Models
 {
     public record Patent : Edition
     {
@@ -10,6 +12,7 @@
         public uint NumberOfPages { get; init; }
         public string? Notes { get; init; }
 
+        [SetsRequiredMembers]
         public Patent(
             string name,
             string inventor,

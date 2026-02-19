@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace BSL.Models
 {
     public record Book : Edition
     {
+        [SetsRequiredMembers]
         public Book(string name, DateOnly year, string publisher, string author) : base(name)
         {
             if (year.Year >= 1900) YearBook = (uint)year.Year;
@@ -16,7 +18,7 @@ namespace BSL.Models
         }
 
         public uint YearBook { get; init; }
-        public string PublisherBook { get; init; }
-        public List<string> Author { get; init; }
+        public required string PublisherBook { get; init; }
+        public required List<string> Author { get; init; }
     }
 }

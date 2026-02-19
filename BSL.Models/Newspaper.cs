@@ -8,7 +8,7 @@ namespace BSL.Models
     public record Newspaper : Edition
     {
         public string PlaceOfPublication { get; init; }
-        public string PublishingHouse { get; init; }
+        public required string PublishingHouse { get; init; }
         public int NumberOfPages { get; init; }
         public string? Notes { get; init; }
         public uint IssueNumber { get; init; }
@@ -23,7 +23,7 @@ namespace BSL.Models
             NumberOfPages = numberOfPages;
             Notes = notes;
             IssueNumber = issueNumber;
-            if (dataPublishing.Year >= 1950) DataPublishing = dataPublishing;
+            if (dataPublishing.Year >= 1900) DataPublishing = dataPublishing;
             else throw new ArgumentOutOfRangeException();
             ISSN = issn;
         }
