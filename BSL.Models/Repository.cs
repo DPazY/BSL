@@ -40,21 +40,11 @@ namespace BSL.Models
 
         public IEnumerable<T> GetAll<T>()
         {
-            if (!(typeof(T) == typeof(Edition)))
+            if (!_fileSystem.File.Exists(GetFilePath<T>()))
             {
-                if (!_fileSystem.File.Exists(GetFilePath<T>()))
-                {
-                    return Enumerable.Empty<T>();
-                }
-                return _dictRepository.TryGetValue(typeof(T), out var repository) ? (IEnumerable<T>)repository : LoadFromFile<T>();
+                return Enumerable.Empty<T>();
             }
-            else
-            {
-                IEnumerable<Edition> editions = Enumerable.Empty<Edition>();
-
-                return (IEnumerable<T>)_dictRepository.Values.Select(e => 
-                Enumerable.Concat((IEnumerable<T>)editions, (IEnumerable<T>) e));
-            }
+            return _dictRepository.TryGetValue(typeof(T), out var repository) ? (IEnumerable<T>)repository : LoadFromFile<T>();
         }
 
 

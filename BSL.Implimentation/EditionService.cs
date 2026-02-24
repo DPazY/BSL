@@ -11,7 +11,15 @@ namespace BSL.Implimentation
             this._editionRepository = editionRepository;
         }
 
-        public IEnumerable<Edition> SearchByName(string name) => _editionRepository.GetAll<Edition>().Where(e => e.Name == name);
+        public IEnumerable<Edition> SearchByName(string name)
+        {
+            var editions = Enumerable.Empty<Edition>();
+            return _editionRepository.GetAll<Book>()
+                .Cast<Edition>()
+                .Concat(_editionRepository.GetAll<Newspaper>()) 
+                .Concat(_editionRepository.GetAll<Patent>())
+                .Where(e => e.Name == name);
+        }
 
     }
 }
