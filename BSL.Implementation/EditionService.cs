@@ -1,6 +1,6 @@
 ﻿using BSL.Models;
 
-namespace BSL.Implimentation
+namespace BSL.Implementation
 {
     public class EditionService : IEditionService
     {
@@ -13,7 +13,6 @@ namespace BSL.Implimentation
 
         public IEnumerable<Edition> SearchByName(string name)
         {
-            var editions = Enumerable.Empty<Edition>();
             return _editionRepository.GetAll<Book>()
                 .Cast<Edition>()
                 .Concat(_editionRepository.GetAll<Newspaper>()) 

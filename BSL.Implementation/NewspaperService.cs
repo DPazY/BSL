@@ -1,6 +1,6 @@
 ﻿using BSL.Models;
 
-namespace BSL.Implimentation
+namespace BSL.Implementation
 {
     public class NewspaperService :EditionService, INewspaperService
     {

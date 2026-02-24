@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BSL.Implimentation\BSL.Implementation.csproj" />
+    <ProjectReference Include="..\BSL.Implementation\BSL.Implementation.csproj" />
     <ProjectReference Include="..\BSL.Models\BSL.Models.csproj" />
   </ItemGroup>
 
