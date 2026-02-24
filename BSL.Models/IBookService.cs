@@ -2,7 +2,7 @@
 {
     public interface IBookService
     {
-        public IEnumerable<Book> GetAll(OrderBy? orderByYear = null);
+        IEnumerable<Book> GetAll(OrderBy? orderByYear = null);
         IEnumerable<Book> GetAllByAuthor(string v);
         IEnumerable<Book> GetAllWherePublisherStarts(string pattern);
     }

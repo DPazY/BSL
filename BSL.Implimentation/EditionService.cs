@@ -1,7 +1,4 @@
 ﻿using BSL.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace BSL.Implimentation
 {
@@ -15,6 +12,6 @@ namespace BSL.Implimentation
         }
 
         public IEnumerable<Edition> SearchByName(string name) => _editionRepository.GetAll<Edition>().Where(e => e.Name == name);
-        
+
     }
 }
