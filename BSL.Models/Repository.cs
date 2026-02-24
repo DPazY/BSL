@@ -1,85 +1,67 @@
-﻿using System.IO.Abstractions;
+﻿using System.Collections.Concurrent;
+using System.IO.Abstractions;
 using System.Text.Json;
 
 namespace BSL.Models
 {
     public class Repository : IRepository
     {
-        private IFileSystem _fileSystem;
-        private string _filePath;
-        private readonly JsonSerializerOptions _jsonOptions;
-        private IEnumerable<Book>? bookRepository = null;
-        private IEnumerable<Newspaper>? newspaperRepository = null;
-        private IEnumerable<Patent>? patentRepository = null;
-        private IEnumerable<Edition>? editionRepository = null;
+        private readonly object _locker;
+        private readonly IFileSystem _fileSystem;
+        private readonly string _directoryPath;
+        private readonly ConcurrentDictionary<Type, string> _dictFilePath = new ConcurrentDictionary<Type, string>();
+        private readonly JsonSerializerOptions? _jsonOptions;
+        private readonly ConcurrentDictionary<Type, object> _dictRepository = new ConcurrentDictionary<Type, object>();
+        
 
-
-        public Repository(IFileSystem fileSystem, string filePath, JsonSerializerOptions jsonOptions)
+        public Repository(IFileSystem fileSystem, string directoryPath, JsonSerializerOptions? jsonOptions = null)
         {
-            this._fileSystem = fileSystem;
-            this._filePath = filePath;
-            this._jsonOptions = jsonOptions;
+            _fileSystem = fileSystem;
+            _directoryPath = directoryPath;
+            _jsonOptions = jsonOptions;
+            _locker = new object();
+        }
+        private IEnumerable<T> LoadFromFile<T>()
+        {
+            lock (_locker)
+            {
+                return (IEnumerable<T>)_dictRepository.GetOrAdd(typeof(T), t =>
+                _fileSystem.File.ReadAllLines(GetFilePath<T>())
+                    .Select(line => JsonSerializer.Deserialize<T>(line, _jsonOptions)!)
+                    .ToList());
+            }
+        }
+
+        private string GetFilePath<T>()
+        {
+            return _dictFilePath.GetOrAdd(typeof(T), t =>
+            _fileSystem.Path.Combine(_directoryPath, $"{typeof(T).Name}s"));
         }
 
         public IEnumerable<T> GetAll<T>()
         {
-            if (!_fileSystem.File.Exists(_filePath)) return Enumerable.Empty<T>();
-
-            return typeof(T) switch
+            if (!_fileSystem.File.Exists(GetFilePath<T>()))
             {
-                Type t when t == typeof(Newspaper) =>
-                    (IEnumerable<T>)(newspaperRepository ?? LoadFromFile<Newspaper>()),
-
-                Type t when t == typeof(Book) =>
-                    (IEnumerable<T>)(bookRepository ?? LoadFromFile<Book>()),
-
-                Type t when t == typeof(Patent) =>
-                    (IEnumerable<T>)(patentRepository ?? LoadFromFile<Patent>()),
-
-                Type t when t == typeof(Edition) =>
-                    (IEnumerable<T>)(editionRepository ?? LoadFromFile<Edition>()),
-
-                _ => throw new NotSupportedException($"Тип {typeof(T).Name} не поддерживается")
-            };
-        }
-
-        private IEnumerable<T> LoadFromFile<T>()
-        {
-            var command = _fileSystem.File.ReadAllLines(_filePath)
-                .Select(line => JsonSerializer.Deserialize<T>(line, _jsonOptions)!)
-                .ToList();
-            var type = typeof(T);
-
-            switch (type.Name)
-            {
-                case "Newspaper":
-                    newspaperRepository = (IEnumerable<Newspaper>)command;
-                        break;
-                case "Book":
-                    bookRepository = (IEnumerable<Book>)command;
-                        break;
-                case "Patent":
-                    patentRepository = (IEnumerable<Patent>)command;
-                        break;
-                case "Edition":
-                    editionRepository = (IEnumerable<Edition>)command;
-                        break;
-                default: throw new NotSupportedException($"Тип {typeof(T).Name} не поддерживается");
+                return Enumerable.Empty<T>();
             }
-
-            return command;
+            return _dictRepository.TryGetValue(typeof(T), out var repository) ? (IEnumerable<T>)repository : LoadFromFile<T>();
         }
 
-        public void Add<T>(IEnumerable<T> editons)
+
+        public void Add<T>(IEnumerable<T> editions)
         {
-            var lines = editons.Select(p => JsonSerializer.Serialize(p, _jsonOptions));
-            _fileSystem.File.WriteAllLines(_filePath, lines);
+            var lines = editions.Select(p => JsonSerializer.Serialize(p, _jsonOptions)).ToList();
+            lock (_locker)
+            {
+                _fileSystem.File.WriteAllLines(GetFilePath<T>(), lines);
+                _dictRepository.TryRemove(typeof(T), out var obj);
+            }
         }
 
-        public void Remove<T>(IEnumerable<T> editons)
+        public void Remove<T>(IEnumerable<T> editions)
         {
             var elements = GetAll<T>();
-            var updateElements = elements.Except(editons).ToList();
+            var updateElements = elements.Except(editions).ToList();
             Add(updateElements);
         }
     }
