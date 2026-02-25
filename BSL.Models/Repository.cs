@@ -26,9 +26,17 @@ namespace BSL.Models
 
             lock (_locker)
             {
+                if (_dictRepository.TryGetValue(typeof(T), out var cachedData))
+                {
+                    return (IEnumerable<T>)cachedData;
+                }
+
                 using var stream = _fileSystem.File.OpenRead(GetFilePath<T>());
-                
-                return _serializerStrategy.Deserialize<T>(stream);
+                var loadedData = _serializerStrategy.Deserialize<T>(stream);
+
+                _dictRepository[typeof(T)] = loadedData;
+
+                return loadedData;
             }
         }
 
@@ -46,7 +54,6 @@ namespace BSL.Models
             }
             return _dictRepository.TryGetValue(typeof(T), out var repository) ? (IEnumerable<T>)repository : LoadFromFile<T>();
         }
-
 
         public void Add<T>(IEnumerable<T> editions)
         {

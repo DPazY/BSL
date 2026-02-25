@@ -1,7 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using ProtoBuf;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BSL.Models
 {
+    [ProtoContract]
     public record Patent : Edition
     {
         protected Patent() : base("") { }
@@ -48,12 +50,19 @@ namespace BSL.Models
             Notes = notes;
         }
 
+        [ProtoMember(1)]
         public required string Inventor { get; init; }
+        [ProtoMember(2)]
         public required string Country { get; init; }
+        [ProtoMember(3)]
         public string RegistrationNumber { get; init; }
+        [ProtoMember(4)]
         public DateOnly SubmissionDate { get; init; }
+        [ProtoMember(5)]
         public DateOnly PublicationDate { get; init; }
+        [ProtoMember(6)]
         public uint NumberOfPages { get; init; }
+        [ProtoMember(7)]
         public string? Notes { get; init; }
 
     }

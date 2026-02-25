@@ -1,7 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using ProtoBuf;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BSL.Models
 {
+    [ProtoContract]
     public record Book : Edition
     {
         protected Book() : base("") { }
@@ -14,9 +16,11 @@ namespace BSL.Models
             Author = author.Split(',', ' ', ';').Where(auth =>
             !string.IsNullOrWhiteSpace(auth) && !string.IsNullOrWhiteSpace(auth)).ToList();
         }
-
+        [ProtoMember(1)]
         public uint YearBook { get; init; }
+        [ProtoMember(2)]
         public required string PublisherBook { get; init; }
+        [ProtoMember(3)]
         public required List<string> Author { get; init; }
     }
 }
