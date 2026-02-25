@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.IO.Abstractions;
-using System.Text.Json;
 
 namespace BSL.Models
 {
@@ -10,25 +9,26 @@ namespace BSL.Models
         private readonly IFileSystem _fileSystem;
         private readonly string _directoryPath;
         private readonly ConcurrentDictionary<Type, string> _dictFilePath = new ConcurrentDictionary<Type, string>();
-        private readonly JsonSerializerOptions? _jsonOptions;
         private readonly ConcurrentDictionary<Type, object> _dictRepository = new ConcurrentDictionary<Type, object>();
-        
+        private readonly ISerializerStrategy? _serializerStrategy;
 
-        public Repository(IFileSystem fileSystem, string directoryPath, JsonSerializerOptions? jsonOptions = null)
+        public Repository(IFileSystem fileSystem,
+            string directoryPath, ISerializerStrategy? serializerStrategy = null)
         {
             _fileSystem = fileSystem;
             _directoryPath = directoryPath;
-            _jsonOptions = jsonOptions;
+            _serializerStrategy = serializerStrategy;
             _locker = new object();
         }
         private IEnumerable<T> LoadFromFile<T>()
         {
+            ArgumentNullException.ThrowIfNull(_serializerStrategy);
+
             lock (_locker)
             {
-                return (IEnumerable<T>)_dictRepository.GetOrAdd(typeof(T), t =>
-                _fileSystem.File.ReadAllLines(GetFilePath<T>())
-                    .Select(line => JsonSerializer.Deserialize<T>(line, _jsonOptions)!)
-                    .ToList());
+                using var stream = _fileSystem.File.OpenRead(GetFilePath<T>());
+                
+                return _serializerStrategy.Deserialize<T>(stream);
             }
         }
 
@@ -50,10 +50,13 @@ namespace BSL.Models
 
         public void Add<T>(IEnumerable<T> editions)
         {
-            var lines = editions.Select(p => JsonSerializer.Serialize(p, _jsonOptions)).ToList();
+            ArgumentNullException.ThrowIfNull(_serializerStrategy);
+
             lock (_locker)
             {
-                _fileSystem.File.WriteAllLines(GetFilePath<T>(), lines);
+                _fileSystem.File.Delete(GetFilePath<T>());
+                using var fileCreated = _fileSystem.File.Create(GetFilePath<T>());
+                _serializerStrategy.Serialize(editions, fileCreated);
                 _dictRepository.TryRemove(typeof(T), out var obj);
             }
         }

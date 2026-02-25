@@ -1,4 +1,5 @@
 ﻿using BSL.Models;
+using BSL.Implementation;
 using FluentAssertions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Text.Encodings.Web;
@@ -87,14 +88,14 @@ namespace BSL.Test
         }
 
         [Test]
-        public void GetAll_WhenFileExists_ReturnCorrectCount()
+        public void GetAll_WhenFileExists_Json_ReturnCorrectCount()
         {
             var line1 = "{\"name\":\"Комсомольская правда\",\"placeOfPublication\":\"Москва\",\"publishingHouse\":\"ИД «Комсомольская правда»\",\"numberOfPages\":16,\"notes\":\"Ежедневная общественно-политическая газета\",\"issueNumber\":15430,\"dataPublishing\":\"2023-10-05\",\"issn\":\"0233-4399\"}";
             var line2 = "{\"name\":\"The New York Times\",\"placeOfPublication\":\"Нью-Йорк, США\",\"publishingHouse\":\"The New York Times Company\",\"numberOfPages\":64,\"notes\":null,\"issueNumber\":58201,\"dataPublishing\":\"2003-10-05\",\"issn\":\"0362-4331\"}";
             var line3 = "{\"name\":\"Ведомости\",\"placeOfPublication\":\"Москва\",\"publishingHouse\":\"АО «Бизнес Ньюс Медиа»\",\"numberOfPages\":32,\"notes\":\"Деловая газета\",\"issueNumber\":450,\"dataPublishing\":\"1999-09-21\",\"issn\":\"1562-2584\"}";
             _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, $"Newspapers"), new MockFileData($"{line1}\n{line2}\n{line3}"));
 
-            var repo = new Repository(_mockFileSystem, _testPath, _jsonOptions);
+            var repo = new Repository(_mockFileSystem, _testPath,new JsonSerializerStrategy (_jsonOptions));
 
             var result = repo.GetAll<Newspaper>();
 
@@ -104,9 +105,9 @@ namespace BSL.Test
         }
 
         [Test]
-        public void Add_ShouldSaveToFileInOneLine()
+        public void Add_Json_ShouldSaveToFileInOneLine()
         {
-            var repo = new Repository(_mockFileSystem, _testPath, _jsonOptions);
+            var repo = new Repository(_mockFileSystem, _testPath, new JsonSerializerStrategy(_jsonOptions));
             var newItem = new List<Newspaper>(){ new Newspaper(
         name: "Комсомольская правда",
         placeOfPublication: "Москва",
@@ -126,7 +127,7 @@ namespace BSL.Test
         }
 
         [Test]
-        public void Remove_ShouldDeleteSpecificItemsFromFile()
+        public void Remove_ShouldDeleteSpecificItemsFromFile_Json()
         {
             var item1 = new Newspaper("Газета 1", "Москва", "Дом 1", 10, null, 1, new DateOnly(2000, 1, 1), "111");
             var item2 = new Newspaper("Газета 2", "Питер", "Дом 2", 20, null, 2, new DateOnly(2010, 1, 1), "222");
@@ -137,7 +138,7 @@ namespace BSL.Test
             var line3 = JsonSerializer.Serialize(item3, _jsonOptions);
             _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, $"Newspapers"), new MockFileData($"{line1}\n{line2}\n{line3}"));
 
-            var repo = new Repository(_mockFileSystem, _testPath, _jsonOptions);
+            var repo = new Repository(_mockFileSystem, _testPath, new JsonSerializerStrategy(_jsonOptions));
 
             var itemsToRemove = new List<Newspaper> { item2 };
 
@@ -153,6 +154,163 @@ namespace BSL.Test
 
                 Assert.That(fileLines.Any(l => l.Contains("Газета 1")), Is.True);
                 Assert.That(fileLines.Any(l => l.Contains("Газета 3")), Is.True);
+            });
+        }
+
+        [Test]
+        public void GetAll_WhenFileExists_Protobuf_ReturnCorrectCount()
+        {
+            var strategy = new ProtobufSerializerStrategy();
+            using var ms = new MemoryStream();
+
+            var items = editions.Take(3).Cast<Newspaper>().ToList();
+            strategy.Serialize(items, ms);
+
+            _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, "Newspapers"), new MockFileData(ms.ToArray()));
+
+            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+
+            var result = repo.GetAll<Newspaper>().ToList();
+
+            Assert.That(result.Count, Is.EqualTo(3));
+            result.Should().BeEquivalentTo(new[] { editions[0], editions[1], editions[2] });
+        }
+
+        [Test]
+        public void Add_Protobuf_ShouldSaveToBinaryFile()
+        {
+            var strategy = new ProtobufSerializerStrategy();
+            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+
+            var newItem = new List<Newspaper> { (Newspaper)editions[0] };
+            var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
+
+            repo.Add(newItem);
+
+            Assert.That(_mockFileSystem.FileExists(filePath), Is.True);
+
+            var fileBytes = _mockFileSystem.File.ReadAllBytes(filePath);
+            Assert.That(fileBytes.Length, Is.GreaterThan(0));
+
+            using var ms = new MemoryStream(fileBytes);
+            var savedItems = strategy.Deserialize<Newspaper>(ms).ToList();
+
+            Assert.That(savedItems.Count, Is.EqualTo(1));
+            savedItems[0].Should().BeEquivalentTo(newItem[0]);
+        }
+
+        [Test]
+        public void Remove_ShouldDeleteSpecificItemsFromFile_Protobuf()
+        {
+            var item1 = new Newspaper("Газета 1", "Москва", "Дом 1", 10, null, 1, new DateOnly(2000, 1, 1), "111");
+            var item2 = new Newspaper("Газета 2", "Питер", "Дом 2", 20, null, 2, new DateOnly(2010, 1, 1), "222");
+            var item3 = new Newspaper("Газета 3", "Омск", "Дом 3", 30, null, 3, new DateOnly(2020, 1, 1), "333");
+
+            var strategy = new ProtobufSerializerStrategy();
+            using var ms = new MemoryStream();
+
+            var initialItems = new List<Newspaper> { item1, item2, item3 };
+            strategy.Serialize(initialItems, ms);
+
+            var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
+            _mockFileSystem.AddFile(filePath, new MockFileData(ms.ToArray()));
+
+            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var itemsToRemove = new List<Newspaper> { item2 };
+
+            repo.Remove(itemsToRemove);
+
+            var fileBytes = _mockFileSystem.File.ReadAllBytes(filePath);
+            using var resultStream = new MemoryStream(fileBytes);
+
+            var remainingItems = strategy.Deserialize<Newspaper>(resultStream).ToList();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(remainingItems.Count, Is.EqualTo(2), "Количество элементов должно уменьшиться");
+
+                Assert.That(remainingItems.Any(i => i.Name == "Газета 2"), Is.False, "Газета 2 должна быть удалена");
+                Assert.That(remainingItems.Any(i => i.Name == "Газета 1"), Is.True);
+                Assert.That(remainingItems.Any(i => i.Name == "Газета 3"), Is.True);
+            });
+        }
+
+        [Test]
+        public void GetAll_WhenFileExists_Xml_ReturnCorrectCount()
+        {
+            var strategy = new XmlSerializerStrategy();
+            using var ms = new MemoryStream();
+
+            var items = editions.Take(3).Cast<Newspaper>().ToList();
+
+            strategy.Serialize(items, ms);
+
+            _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, "Newspapers"), new MockFileData(ms.ToArray()));
+
+            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+
+            var result = repo.GetAll<Newspaper>().ToList();
+
+            Assert.That(result.Count, Is.EqualTo(3));
+            result.Should().BeEquivalentTo(new[] { editions[0], editions[1], editions[2] });
+        }
+
+        [Test]
+        public void Add_Xml_ShouldSaveToFile()
+        {
+            var strategy = new XmlSerializerStrategy();
+            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+
+            var newItem = new List<Newspaper> { (Newspaper)editions[0] };
+            var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
+
+            repo.Add(newItem);
+
+            Assert.That(_mockFileSystem.FileExists(filePath), Is.True);
+
+            var fileBytes = _mockFileSystem.File.ReadAllBytes(filePath);
+            Assert.That(fileBytes.Length, Is.GreaterThan(0));
+
+            using var ms = new MemoryStream(fileBytes);
+            var savedItems = strategy.Deserialize<Newspaper>(ms).ToList();
+
+            Assert.That(savedItems.Count, Is.EqualTo(1));
+            savedItems[0].Should().BeEquivalentTo(newItem[0]);
+        }
+
+        [Test]
+        public void Remove_ShouldDeleteSpecificItemsFromFile_Xml()
+        {
+            var item1 = new Newspaper("Газета 1", "Москва", "Дом 1", 10, null, 1, new DateOnly(2000, 1, 1), "111");
+            var item2 = new Newspaper("Газета 2", "Питер", "Дом 2", 20, null, 2, new DateOnly(2010, 1, 1), "222");
+            var item3 = new Newspaper("Газета 3", "Омск", "Дом 3", 30, null, 3, new DateOnly(2020, 1, 1), "333");
+
+            var strategy = new XmlSerializerStrategy();
+            using var ms = new MemoryStream();
+
+            var initialItems = new List<Newspaper> { item1, item2, item3 };
+            strategy.Serialize(initialItems, ms);
+
+            var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
+            _mockFileSystem.AddFile(filePath, new MockFileData(ms.ToArray()));
+
+            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var itemsToRemove = new List<Newspaper> { item2 };
+
+            repo.Remove(itemsToRemove);
+
+            var fileBytes = _mockFileSystem.File.ReadAllBytes(filePath);
+            using var resultStream = new MemoryStream(fileBytes);
+
+            var remainingItems = strategy.Deserialize<Newspaper>(resultStream).ToList();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(remainingItems.Count, Is.EqualTo(2), "Количество элементов должно уменьшиться");
+
+                Assert.That(remainingItems.Any(i => i.Name == "Газета 2"), Is.False, "Газета 2 должна быть удалена");
+                Assert.That(remainingItems.Any(i => i.Name == "Газета 1"), Is.True);
+                Assert.That(remainingItems.Any(i => i.Name == "Газета 3"), Is.True);
             });
         }
     }

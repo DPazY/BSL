@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace BSL.Models
 {
     public record Book : Edition
     {
+        protected Book() : base("") { }
         [SetsRequiredMembers]
         public Book(string name, DateOnly year, string publisher, string author) : base(name)
         {

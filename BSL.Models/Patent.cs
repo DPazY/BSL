@@ -4,13 +4,7 @@ namespace BSL.Models
 {
     public record Patent : Edition
     {
-        public required string Inventor { get; init; }
-        public required string Country { get; init; }
-        public string RegistrationNumber { get; init; }
-        public DateOnly SubmissionDate { get; init; }
-        public DateOnly PublicationDate { get; init; }
-        public uint NumberOfPages { get; init; }
-        public string? Notes { get; init; }
+        protected Patent() : base("") { }
 
         [SetsRequiredMembers]
         public Patent(
@@ -53,5 +47,14 @@ namespace BSL.Models
 
             Notes = notes;
         }
+
+        public required string Inventor { get; init; }
+        public required string Country { get; init; }
+        public string RegistrationNumber { get; init; }
+        public DateOnly SubmissionDate { get; init; }
+        public DateOnly PublicationDate { get; init; }
+        public uint NumberOfPages { get; init; }
+        public string? Notes { get; init; }
+
     }
 }
