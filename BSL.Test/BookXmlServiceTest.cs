@@ -1,5 +1,6 @@
 ﻿using BSL.Implementation;
 using BSL.Models;
+using FluentAssertions;
 using Moq;
 using System.Xml.Serialization;
 
@@ -152,6 +153,123 @@ namespace BSL.Test
                 books.Count() == 12 &&
                 books.Any(b => b.Name == "Midnight Rain")
             )), Times.Once);
+        }
+
+        [Test]
+        public void Export_NullStream_ShouldThrowArgumentNullException()
+        {
+            Action act = () => _service.Export(null!);
+            act.Should().Throw<ArgumentNullException>();
+        }
+
+        [Test]
+        public void Export_EmptyStream_ShouldWriteRepositoryBooksToStream()
+        {
+            var repoBooks = new List<Book>
+            {
+                new Book("Уникальная книга 1", new DateOnly(2020, 1, 1), "Издат", "Автор")
+             };
+            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+
+            using var stream = new MemoryStream();
+
+            _service.Export(stream);
+
+            stream.Position = 0;
+            var serializer = new XmlSerializer(typeof(CatalogXmlDto));
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+
+            resultCatalog.Should().NotBeNull();
+            resultCatalog.Books.Should().HaveCount(1);
+            resultCatalog.Books.First().Title.Should().Be("Уникальная книга 1");
+            resultCatalog.Books.First().Author.Should().Be("Автор");
+        }
+
+        [Test]
+        public void Export_ExistingXml_ShouldAppendOnlyNewBooks()
+        {
+            var initialXml = new CatalogXmlDto()
+            {
+                Books = new List<BookXmlDto>
+                {
+            new BookXmlDto { Title = "Существующая книга", Author = "Старый Автор" }
+                }
+            };
+            using var stream = GetXmlStream(initialXml);
+
+            var repoBooks = new List<Book>
+            {
+                new Book("Новая книга", new DateOnly(2021, 5, 5), "Прес", "Новый Автор")
+            };
+            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+
+            _service.Export(stream);
+
+            stream.Position = 0;
+            var serializer = new XmlSerializer(typeof(CatalogXmlDto));
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+
+            resultCatalog.Books.Should().HaveCount(2, "В XML должны быть и старая, и новая книги");
+            resultCatalog.Books.Should().ContainSingle(b => b.Title == "Существующая книга");
+            resultCatalog.Books.Should().ContainSingle(b => b.Title == "Новая книга");
+        }
+
+        [Test]
+        public void Export_ExistingXml_ShouldNotAppendDuplicateBooks()
+        {
+            var initialXml = new CatalogXmlDto()
+            {
+                Books = new List<BookXmlDto>
+                {
+                    new BookXmlDto { Title = "Дубликат", Author = "Автор" }
+                }
+            };
+            using var stream = GetXmlStream(initialXml);
+
+            var repoBooks = new List<Book>
+            {
+                new Book("Дубликат", new DateOnly(2021, 1, 1), "Прес", "Автор"),
+                new Book("Уникальная книга", new DateOnly(2022, 2, 2), "Прес", "Автор 2")
+            };
+            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+
+            _service.Export(stream);
+
+            stream.Position = 0;
+            var serializer = new XmlSerializer(typeof(CatalogXmlDto));
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+
+            resultCatalog.Books.Should().HaveCount(2, "Дубликат не должен быть добавлен дважды");
+            resultCatalog.Books.Should().ContainSingle(b => b.Title == "Дубликат");
+            resultCatalog.Books.Should().ContainSingle(b => b.Title == "Уникальная книга");
+        }
+
+        [Test]
+        public void Export_IntegrationTest_ShouldCorrectlyAppendToRealBooksXml()
+        {
+            var repoBooks = new List<Book>
+            {
+            new Book("Midnight Rain", new DateOnly(2000, 12, 16), "R & D", "Ralls, Kim"), 
+            new Book("CLR via C#", new DateOnly(2012, 1, 1), "Microsoft", "Jeffrey Richter") 
+            };
+            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+
+            string filePath = "books.xml";
+            byte[] fileBytes = File.ReadAllBytes(filePath);
+
+            using var stream = new MemoryStream();
+            stream.Write(fileBytes, 0, fileBytes.Length);
+            stream.Position = 0;
+
+            _service.Export(stream);
+
+            stream.Position = 0;
+            var serializer = new XmlSerializer(typeof(CatalogXmlDto));
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+
+            resultCatalog.Books.Should().HaveCount(13);
+            resultCatalog.Books.Should().ContainSingle(b => b.Title == "Midnight Rain", "Оригинальная книга должна остаться");
+            resultCatalog.Books.Should().ContainSingle(b => b.Title == "CLR via C#", "Новая книга должна быть добавлена");
         }
     }
 }

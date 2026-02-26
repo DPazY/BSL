@@ -11,6 +11,7 @@ namespace BSL.Implementation
             _bookXmlRepository = bookXmlRepozitory;
         }
 
+
         public void Import(Stream stream)
         {
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
@@ -52,6 +53,49 @@ namespace BSL.Implementation
 
                 _bookXmlRepository.Add(booksForRepository);
             }
+        }
+        public Stream Export(Stream stream)
+        {
+            var serializer = new XmlSerializer(typeof(CatalogXmlDto));
+
+            ArgumentNullException.ThrowIfNull(stream, nameof(stream));
+
+            CatalogXmlDto catalog = new CatalogXmlDto();
+            if (stream.Length != 0)
+            {
+                catalog = (CatalogXmlDto?)serializer.Deserialize(stream);
+            }
+
+            ArgumentNullException.ThrowIfNull(catalog, nameof(catalog));
+
+            var booksFromRepository = _bookXmlRepository.GetAll<Book>().ToList();
+
+            if (catalog.Books == null) catalog.Books = new List<BookXmlDto>();
+
+            var hashset = new HashSet<string>(catalog.Books.Select(b => b.Title));
+            foreach (var book in booksFromRepository)
+            {
+                
+                if (!hashset.Contains(book.Name))
+                {
+                    hashset.Add(book.Name);
+                    catalog.Books.Add(new BookXmlDto()
+                    {
+                        Title = book.Name,
+                        Author = string.Join(' ', book.Author),
+                        Publisher = book.PublisherBook,
+                        PublishDate = book.YearBook.ToString(),
+                    });
+                }
+            }
+            if (catalog.Books.Any())
+            {
+                stream.Position = 0;
+                stream.SetLength(0);
+                serializer.Serialize(stream, catalog);
+                return stream;
+            }
+            return stream;
         }
     }
 }
