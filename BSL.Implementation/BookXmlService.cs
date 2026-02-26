@@ -21,6 +21,7 @@ namespace BSL.Implementation
             var newBooksForRepository = new List<Book>();
             var booksForRepository = _bookXmlRepository.GetAll<Book>().ToList();
 
+            var hashset = new HashSet<string>(booksForRepository.Select(b => b.Name));
            
                 foreach (var book in catalog.Books)
                 {
@@ -37,9 +38,9 @@ namespace BSL.Implementation
                     {
                         publishDate = new DateOnly(1900, 1, 1);
                     }
-                    if (booksForRepository.All(book => book.Name != name) &&
-                        newBooksForRepository.All(book => book.Name != name))
+                    if (!hashset.Contains(name))
                     {
+                        hashset.Add(name);
                         var domainBook = new Book(name, publishDate, publisher, author);
                         newBooksForRepository.Add(domainBook);
                     }
