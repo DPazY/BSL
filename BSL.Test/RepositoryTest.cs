@@ -1,5 +1,5 @@
-﻿using BSL.Models;
-using BSL.Implementation;
+﻿using BSL.Implementation;
+using BSL.Models;
 using FluentAssertions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Text.Encodings.Web;
@@ -95,7 +95,8 @@ namespace BSL.Test
             var line3 = "{\"name\":\"Ведомости\",\"placeOfPublication\":\"Москва\",\"publishingHouse\":\"АО «Бизнес Ньюс Медиа»\",\"numberOfPages\":32,\"notes\":\"Деловая газета\",\"issueNumber\":450,\"dataPublishing\":\"1999-09-21\",\"issn\":\"1562-2584\"}";
             _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, $"Newspapers"), new MockFileData($"{line1}\n{line2}\n{line3}"));
 
-            var repo = new Repository(_mockFileSystem, _testPath,new JsonSerializerStrategy (_jsonOptions));
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, new JsonSerializerStrategy(_jsonOptions));
+            var repo = new CachedRepository(fileRepo);
 
             var result = repo.GetAll<Newspaper>();
 
@@ -107,23 +108,25 @@ namespace BSL.Test
         [Test]
         public void Add_Json_ShouldSaveToFileInOneLine()
         {
-            var repo = new Repository(_mockFileSystem, _testPath, new JsonSerializerStrategy(_jsonOptions));
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, new JsonSerializerStrategy(_jsonOptions));
+            var repo = new CachedRepository(fileRepo);
+
             var newItem = new List<Newspaper>(){ new Newspaper(
-        name: "Комсомольская правда",
-        placeOfPublication: "Москва",
-        publishingHouse: "ИД «Комсомольская правда»",
-        numberOfPages: 16,
-        notes: "Ежедневная общественно-политическая газета",
-        issueNumber: 15430,
-        dataPublishing: new DateOnly(2023, 10, 5),
-        issn: "0233-4399"
-    ) };
+                name: "Комсомольская правда",
+                placeOfPublication: "Москва",
+                publishingHouse: "ИД «Комсомольская правда»",
+                numberOfPages: 16,
+                notes: "Ежедневная общественно-политическая газета",
+                issueNumber: 15430,
+                dataPublishing: new DateOnly(2023, 10, 5),
+                issn: "0233-4399"
+            ) };
             repo.Add(newItem);
 
             var fileLines = _mockFileSystem.File.ReadAllLines(_mockFileSystem.Path.Combine(_testPath, $"Newspapers"));
             Assert.That(fileLines.Length, Is.EqualTo(1));
             Assert.That(fileLines[0], Does.Contain("ИД «Комсомольская правда»"));
-            Assert.That(fileLines[0], Does.Not.Contain(Environment.NewLine)); // Проверка на одну строку
+            Assert.That(fileLines[0], Does.Not.Contain(Environment.NewLine));
         }
 
         [Test]
@@ -138,7 +141,8 @@ namespace BSL.Test
             var line3 = JsonSerializer.Serialize(item3, _jsonOptions);
             _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, $"Newspapers"), new MockFileData($"{line1}\n{line2}\n{line3}"));
 
-            var repo = new Repository(_mockFileSystem, _testPath, new JsonSerializerStrategy(_jsonOptions));
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, new JsonSerializerStrategy(_jsonOptions));
+            var repo = new CachedRepository(fileRepo);
 
             var itemsToRemove = new List<Newspaper> { item2 };
 
@@ -168,7 +172,8 @@ namespace BSL.Test
 
             _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, "Newspapers"), new MockFileData(ms.ToArray()));
 
-            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, strategy);
+            var repo = new CachedRepository(fileRepo);
 
             var result = repo.GetAll<Newspaper>().ToList();
 
@@ -180,7 +185,8 @@ namespace BSL.Test
         public void Add_Protobuf_ShouldSaveToBinaryFile()
         {
             var strategy = new ProtobufSerializerStrategy();
-            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, strategy);
+            var repo = new CachedRepository(fileRepo);
 
             var newItem = new List<Newspaper> { (Newspaper)editions[0] };
             var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
@@ -215,7 +221,9 @@ namespace BSL.Test
             var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
             _mockFileSystem.AddFile(filePath, new MockFileData(ms.ToArray()));
 
-            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, strategy);
+            var repo = new CachedRepository(fileRepo);
+
             var itemsToRemove = new List<Newspaper> { item2 };
 
             repo.Remove(itemsToRemove);
@@ -247,7 +255,8 @@ namespace BSL.Test
 
             _mockFileSystem.AddFile(_mockFileSystem.Path.Combine(_testPath, "Newspapers"), new MockFileData(ms.ToArray()));
 
-            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, strategy);
+            var repo = new CachedRepository(fileRepo);
 
             var result = repo.GetAll<Newspaper>().ToList();
 
@@ -259,7 +268,8 @@ namespace BSL.Test
         public void Add_Xml_ShouldSaveToFile()
         {
             var strategy = new XmlSerializerStrategy();
-            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, strategy);
+            var repo = new CachedRepository(fileRepo);
 
             var newItem = new List<Newspaper> { (Newspaper)editions[0] };
             var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
@@ -294,7 +304,9 @@ namespace BSL.Test
             var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers");
             _mockFileSystem.AddFile(filePath, new MockFileData(ms.ToArray()));
 
-            var repo = new Repository(_mockFileSystem, _testPath, strategy);
+            var fileRepo = new FileRepository(_mockFileSystem, _testPath, strategy);
+            var repo = new CachedRepository(fileRepo);
+
             var itemsToRemove = new List<Newspaper> { item2 };
 
             repo.Remove(itemsToRemove);

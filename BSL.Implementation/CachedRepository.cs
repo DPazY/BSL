@@ -1,0 +1,55 @@
+﻿using BSL.Models;
+using System.Collections.Concurrent;
+
+namespace BSL.Implementation
+{
+    public class CachedRepository : RepositoryDecorator
+    {
+        private readonly object _locker = new object();
+        private readonly ConcurrentDictionary<Type, object> _dictRepository = new ConcurrentDictionary<Type, object>();
+        
+        public CachedRepository(IRepository innerRepository) : base(innerRepository) { }
+
+        public override void Add<T>(IEnumerable<T> editions)
+        {
+            lock (_locker)
+            {
+                base.Add(editions);
+                _dictRepository.TryRemove(typeof(T), out var obj);
+            }
+        }
+
+        public override IEnumerable<T> GetAll<T>()
+        {
+            if (_dictRepository.TryGetValue(typeof(T), out var repository))
+            {
+                return (IEnumerable<T>)repository;
+            }
+            else
+            {
+                lock (_locker)
+                {
+                    if (_dictRepository.TryGetValue(typeof(T), out var _repository))
+                    {
+                        return (IEnumerable<T>)_repository;
+                    }
+                    var dataFromFile = base.GetAll<T>();
+                    
+                    _dictRepository[typeof(T)] = dataFromFile;
+
+                    return dataFromFile;
+                }
+            }
+        }
+
+        public override void Remove<T>(IEnumerable<T> editions)
+        {
+            lock (_locker)
+            {
+                base.Remove(editions);
+
+                _dictRepository.TryRemove(typeof(T), out _);
+            }
+        }
+    }
+}

@@ -17,7 +17,7 @@ public class NewspaperServiceTest
         numberOfPages: 16,
         notes: "Ежедневная общественно-политическая газета",
         issueNumber: 15430,
-        dataPublishing: new DateOnly(2023, 10, 5),  // Дата выпуска (должна быть >= 1950)
+        dataPublishing: new DateOnly(2023, 10, 5), 
         issn: "0233-4399"
     ),
 
@@ -26,9 +26,9 @@ public class NewspaperServiceTest
         placeOfPublication: "Нью-Йорк, США",
         publishingHouse: "The New York Times Company",
         numberOfPages: 64,
-        notes: null,                      // Пример nullable поля
+        notes: null,                     
         issueNumber: 58201,
-        dataPublishing: new DateOnly(2003, 10, 5), // Еще один способ создания DateOnly
+        dataPublishing: new DateOnly(2003, 10, 5),
         issn: "0362-4331"
     ),
 
@@ -39,7 +39,7 @@ public class NewspaperServiceTest
         numberOfPages: 32,
         notes: "Деловая газета",
         issueNumber: 450,
-        dataPublishing: new DateOnly(1999, 9, 21),  // Минимально допустимый год по логике конструктора
+        dataPublishing: new DateOnly(1999, 9, 21),  
         issn: "1562-2584"
     )
 };
