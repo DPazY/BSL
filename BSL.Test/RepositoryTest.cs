@@ -1,4 +1,5 @@
-﻿using BSL.Implementation;
+﻿using BSL.Implementation.Repository;
+using BSL.Implementation.SerializerStrategy;
 using BSL.Models;
 using FluentAssertions;
 using System.IO.Abstractions.TestingHelpers;
@@ -306,6 +307,7 @@ namespace BSL.Test
 
             var fileRepo = new FileRepository(_mockFileSystem, _testPath, strategy);
             var repo = new CachedRepository(fileRepo);
+            
 
             var itemsToRemove = new List<Newspaper> { item2 };
 

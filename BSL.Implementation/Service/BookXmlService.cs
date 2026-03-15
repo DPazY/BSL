@@ -1,7 +1,9 @@
 ﻿using BSL.Models;
+using BSL.Models.Dto;
+using BSL.Models.Interface;
 using System.Xml.Serialization;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Service
 {
     public class BookXmlService : IXmlService
     {

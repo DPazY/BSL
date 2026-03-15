@@ -1,4 +1,4 @@
-﻿namespace BSL.Models
+﻿namespace BSL.Models.Interface
 {
     public interface IXmlService
     {

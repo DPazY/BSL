@@ -1,5 +1,5 @@
 ﻿using System.Xml.Serialization;
-namespace BSL.Models
+namespace BSL.Models.Dto
 {
     [XmlRoot("catalog", Namespace = "http://library.by/catalog")]
     public class CatalogXmlDto

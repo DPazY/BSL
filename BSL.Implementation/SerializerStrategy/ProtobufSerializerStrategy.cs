@@ -1,7 +1,7 @@
-﻿using BSL.Models;
+﻿using BSL.Models.Interface;
 using ProtoBuf;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.SerializerStrategy
 {
     public class ProtobufSerializerStrategy : ISerializerStrategy
     {

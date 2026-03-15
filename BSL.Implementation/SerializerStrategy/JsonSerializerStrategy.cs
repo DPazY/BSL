@@ -1,8 +1,8 @@
-﻿using BSL.Models;
+﻿using BSL.Models.Interface;
 using System.Text.Json;
 
 
-namespace BSL.Implementation
+namespace BSL.Implementation.SerializerStrategy
 {
     public class JsonSerializerStrategy : ISerializerStrategy
     {

@@ -1,5 +1,7 @@
-﻿using BSL.Implementation;
+﻿using BSL.Implementation.Service;
 using BSL.Models;
+using BSL.Models.Enum;
+using BSL.Models.Interface;
 using FluentAssertions;
 using Moq;
 using static System.Reflection.Metadata.BlobBuilder;

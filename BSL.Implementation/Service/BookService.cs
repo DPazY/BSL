@@ -1,7 +1,9 @@
 ﻿using BSL.Models;
+using BSL.Models.Enum;
+using BSL.Models.Interface;
 using System.Text.RegularExpressions;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Service
 {
     public class BookService : EditionService, IBookService
     {

@@ -1,7 +1,7 @@
-﻿using BSL.Models;
+﻿using BSL.Models.Interface;
 using System.Xml.Serialization;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.SerializerStrategy
 {
     public class XmlSerializerStrategy : ISerializerStrategy
     {

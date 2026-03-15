@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace BSL.Models
+namespace BSL.Models.Interface
 {
     public interface ISerializerStrategy
     {

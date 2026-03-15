@@ -1,5 +1,6 @@
-﻿using BSL.Implementation;
+﻿using BSL.Implementation.Service;
 using BSL.Models;
+using BSL.Models.Interface;
 using FluentAssertions;
 using Moq;
 

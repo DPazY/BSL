@@ -1,5 +1,7 @@
-﻿using BSL.Implementation;
+﻿using BSL.Implementation.Service;
 using BSL.Models;
+using BSL.Models.Dto;
+using BSL.Models.Interface;
 using FluentAssertions;
 using Moq;
 using System.Xml.Serialization;
@@ -177,7 +179,7 @@ namespace BSL.Test
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
-            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream)!;
 
             resultCatalog.Should().NotBeNull();
             resultCatalog.Books.Should().HaveCount(1);
@@ -207,7 +209,7 @@ namespace BSL.Test
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
-            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream)!;
 
             resultCatalog.Books.Should().HaveCount(2, "В XML должны быть и старая, и новая книги");
             resultCatalog.Books.Should().ContainSingle(b => b.Title == "Существующая книга");
@@ -237,7 +239,7 @@ namespace BSL.Test
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
-            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream)!;
 
             resultCatalog.Books.Should().HaveCount(2, "Дубликат не должен быть добавлен дважды");
             resultCatalog.Books.Should().ContainSingle(b => b.Title == "Дубликат");
@@ -265,7 +267,7 @@ namespace BSL.Test
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
-            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream);
+            var resultCatalog = (CatalogXmlDto)serializer.Deserialize(stream)!;
 
             resultCatalog.Books.Should().HaveCount(13);
             resultCatalog.Books.Should().ContainSingle(b => b.Title == "Midnight Rain", "Оригинальная книга должна остаться");

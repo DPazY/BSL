@@ -1,12 +1,12 @@
-﻿using BSL.Models;
+﻿using BSL.Models.Interface;
 using System.Collections.Concurrent;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Repository
 {
     public class CachedRepository : RepositoryDecorator
     {
-        private readonly object _locker = new object();
-        private readonly ConcurrentDictionary<Type, object> _dictRepository = new ConcurrentDictionary<Type, object>();
+        private readonly object _locker = new();
+        private readonly ConcurrentDictionary<Type, object> _dictRepository = new();
         
         public CachedRepository(IRepository innerRepository) : base(innerRepository) { }
 
@@ -15,7 +15,7 @@ namespace BSL.Implementation
             lock (_locker)
             {
                 base.Add(editions);
-                _dictRepository.TryRemove(typeof(T), out var obj);
+                _dictRepository.TryRemove(typeof(T), out var _);
             }
         }
 

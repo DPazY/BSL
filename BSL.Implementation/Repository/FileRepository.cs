@@ -1,18 +1,18 @@
-﻿using BSL.Models;
+﻿using BSL.Models.Interface;
 using System.Collections.Concurrent;
 using System.IO.Abstractions;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Repository
 {
     public class FileRepository : IRepository
     {
         private readonly IFileSystem _fileSystem;
         private readonly string _directoryPath;
         private readonly ConcurrentDictionary<Type, string> _dictFilePath = new ConcurrentDictionary<Type, string>();
-        private readonly ISerializerStrategy? _serializerStrategy;
+        private readonly ISerializerStrategy _serializerStrategy;
 
         public FileRepository(IFileSystem fileSystem,
-            string directoryPath, ISerializerStrategy? serializerStrategy = null)
+            string directoryPath, ISerializerStrategy serializerStrategy)
         {
             _fileSystem = fileSystem;
             _directoryPath = directoryPath;

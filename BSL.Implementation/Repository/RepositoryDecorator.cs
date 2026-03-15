@@ -1,6 +1,6 @@
-﻿using BSL.Models;
+﻿using BSL.Models.Interface;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Repository
 {
     public abstract class RepositoryDecorator : IRepository
     {

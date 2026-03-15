@@ -1,4 +1,4 @@
-﻿namespace BSL.Models
+﻿namespace BSL.Models.Enum
 {
     public enum OrderBy
     {

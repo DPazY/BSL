@@ -1,6 +1,8 @@
 ﻿using BSL.Models;
+using BSL.Models.Enum;
+using BSL.Models.Interface;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Service
 {
     public class NewspaperService :EditionService, INewspaperService
     {

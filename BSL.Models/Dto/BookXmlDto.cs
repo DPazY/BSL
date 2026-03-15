@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace BSL.Models
+namespace BSL.Models.Dto
 {
     public class BookXmlDto
     {
