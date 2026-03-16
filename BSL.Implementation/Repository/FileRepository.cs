@@ -1,4 +1,5 @@
 ﻿using BSL.Models.Interface;
+using BSL.Models;
 using System.Collections.Concurrent;
 using System.IO.Abstractions;
 
@@ -7,15 +8,16 @@ namespace BSL.Implementation.Repository
     public class FileRepository : IRepository
     {
         private readonly IFileSystem _fileSystem;
-        private readonly string _directoryPath;
+        private readonly AppSettings _appSetings;
         private readonly ConcurrentDictionary<Type, string> _dictFilePath = new ConcurrentDictionary<Type, string>();
         private readonly ISerializerStrategy _serializerStrategy;
 
         public FileRepository(IFileSystem fileSystem,
-            string directoryPath, ISerializerStrategy serializerStrategy)
+            AppSettings appSetings,
+            ISerializerStrategy serializerStrategy)
         {
             _fileSystem = fileSystem;
-            _directoryPath = directoryPath;
+            _appSetings = appSetings;
             _serializerStrategy = serializerStrategy;
         }
         private IEnumerable<T> LoadFromFile<T>()
@@ -29,7 +31,7 @@ namespace BSL.Implementation.Repository
         private string GetFilePath<T>()
         {
             return _dictFilePath.GetOrAdd(typeof(T), t =>
-            _fileSystem.Path.Combine(_directoryPath, $"{typeof(T).Name}s"));
+            _fileSystem.Path.Combine(_appSetings.WorkDirectory, $"{typeof(T).Name}s" + _appSetings.FileExtension));
         }
 
         public IEnumerable<T> GetAll<T>()

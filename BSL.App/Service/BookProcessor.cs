@@ -1,3 +1,5 @@
+using BSL.Models;
+using BSL.Models.Enum;
 using BSL.Models.Interface;
 using Microsoft.Extensions.Hosting;
 
@@ -20,7 +22,16 @@ namespace BSL.App.Service
                     {
                         xmlService.Import(file);
                     }
-                    File.Delete(newFilePath);
+
+                    switch (appSettings.ProcessedFileAction)
+                    {
+                        case ProcessedFileAction.Delete : 
+                            File.Delete(newFilePath);
+                            break;
+                        case ProcessedFileAction.None : 
+                            break;
+                    }
+                    
                 }
                 catch (IOException ex)
                 {

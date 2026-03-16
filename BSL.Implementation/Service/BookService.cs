@@ -1,14 +1,13 @@
 ﻿using BSL.Models;
 using BSL.Models.Enum;
 using BSL.Models.Interface;
-using System.Text.RegularExpressions;
 
 namespace BSL.Implementation.Service
 {
     public class BookService : EditionService, IBookService
     {
         public BookService(IRepository bookRepository) : base(bookRepository) { }
-        
+
 
         public IEnumerable<Book> GetAll(OrderBy? orderBy = null)
         {
@@ -20,20 +19,22 @@ namespace BSL.Implementation.Service
             };
         }
 
+
         public IEnumerable<Book> GetAllByAuthor(string author)
         {
             if (!string.IsNullOrEmpty(author))
             {
                 return _editionRepository.GetAll<Book>().Where(b => b.Author.Contains(author));
-                
+
             }
             else return _editionRepository.GetAll<Book>();
         }
 
         public IEnumerable<Book> GetAllWherePublisherStarts(string pattern)
         {
-            return _editionRepository.GetAll<Book>().Where(b => Regex.IsMatch(b.PublisherBook,
-                $@"^{pattern}", RegexOptions.IgnoreCase)).OrderBy(b => b.PublisherBook);
+            return _editionRepository.GetAll<Book>()
+                .Where(b => b.PublisherBook.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(b => b.PublisherBook);
         }
     }
 }

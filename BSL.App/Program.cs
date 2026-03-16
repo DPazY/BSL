@@ -1,12 +1,18 @@
 ﻿using BSL.App;
 using BSL.App.Service;
 using BSL.Implementation.Repository;
+using BSL.Implementation.SerializerStrategy;
 using BSL.Implementation.Service;
+using BSL.Models;
+using BSL.Models.Enum;
 using BSL.Models.Interface;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting.Systemd;
+using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Logging;
+using System.IO.Abstractions;
 
 internal class Program
 {
@@ -14,35 +20,71 @@ internal class Program
     {
         var configurationBuilder = new ConfigurationBuilder();
 
-        configurationBuilder.AddInMemoryCollection(
+        configurationBuilder
+            .AddInMemoryCollection(
             new Dictionary<string, string?>
             {
-                ["WorkDir"] = Environment.CurrentDirectory
+                ["WorkDir"] = Environment.CurrentDirectory,
+                ["FileWatcher"] = Environment.CurrentDirectory,
+                ["ProcessedFile"] = "None"
             });
 
 
-        configurationBuilder.AddJsonFile("AppConfig.json", true);
+        configurationBuilder.AddJsonFile("AppConfig.json");
 
         var configuration = configurationBuilder.Build();
 
         var workdir =
             configuration.GetSection("WorkDir").Value;
+        var fileWatcher = configuration.GetSection("FileWatcher").Value;
+        ProcessedFileAction processedFile = Enum.Parse<ProcessedFileAction>(configuration.GetSection("ProcessedFile").Value);
 
-        await Host.CreateDefaultBuilder()
-                .UseCommandLineApplication<App>(args)
-                .ConfigureServices(serviceCollection =>
+        var host = Host.CreateDefaultBuilder();
+        if (args.Length > 0)
+            host.UseCommandLineApplication<App>(args);
+
+        var hostBuilded = host
+            .ConfigureServices(serviceCollection =>
+            {
+                serviceCollection.AddSingleton<IBookService, BookService>();
+                serviceCollection.AddSingleton<IXmlService, BookXmlService>();
+                serviceCollection.AddSingleton<AppSettings>(new AppSettings(workdir, fileWatcher, processedFile));
+                serviceCollection.AddSingleton<ISerializerStrategy, XmlSerializerStrategy>();
+                serviceCollection.AddSingleton<IFileSystem>(provider =>
                 {
-                    serviceCollection.AddSingleton<IBookService, BookService>();
-                    serviceCollection.AddSingleton<IXmlService, BookXmlService>();
-                    serviceCollection.AddSingleton<IRepository, CachedRepository>();
-                    serviceCollection.AddSingleton<AppSettings>(new AppSettings(workdir));
-                })
-                .ConfigureLogging(loggingBuilder =>
+                    return new FileSystem();
+                });
+                serviceCollection.AddSingleton<IRepository>(provider =>
                 {
-                    loggingBuilder.AddConsole();
-                    loggingBuilder.SetMinimumLevel(LogLevel.Debug);
-                })
-                .Build()
-                .RunCommandLineApplicationAsync();
+                    var settings = provider.GetRequiredService<AppSettings>();
+                    var fileSystem = provider.GetRequiredService<IFileSystem>();
+                    var serializer = provider.GetRequiredService<ISerializerStrategy>();
+
+                    var repository = new FileRepository(fileSystem, settings, serializer);
+
+                    return new CachedRepository(repository);
+                });
+
+                if (args.Length == 0)
+                {
+                    serviceCollection.AddHostedService<FileWatcher>();
+                    serviceCollection.AddHostedService<BookProcessor>();
+                    serviceCollection.AddSingleton<FileProcessingQueue>();
+
+                    if (WindowsServiceHelpers.IsWindowsService())
+                        serviceCollection.AddWindowsService();
+                    else if (SystemdHelpers.IsSystemdService())
+                        serviceCollection.AddSystemd();
+                }
+            })
+            .ConfigureLogging(loggingBuilder =>
+            {
+                loggingBuilder.AddConsole();
+                loggingBuilder.SetMinimumLevel(LogLevel.Debug);
+            })
+            .Build();
+
+        if (args.Length > 0) await hostBuilded.RunCommandLineApplicationAsync();
+        else await hostBuilded.RunAsync();
     }
 }

@@ -1,19 +1,57 @@
+using BSL.Implementation.Service;
+using BSL.Models.Interface;
 using McMaster.Extensions.CommandLineUtils;
+using Microsoft.Extensions.Logging;
+using System.ComponentModel.DataAnnotations;
 
 namespace BSL.App.Commands
 {
     [Command("list", Description = "Show list")]
-    public class List
+    public class List(
+        BookService bookService,
+        IXmlService xmlService,
+        ILogger<Upload> logger,
+        IConsole console)
     {
-        [Option("-f|--fullPath", CommandOptionType.NoValue,
-            Description = "Print full path")]
-        public bool PrintFullPath { get; set; }
+        [Required]
+        [Argument(0, "outFile", Description = "Path to save the filtered dump")]
+        public string OutFile { get; set; }
 
-        [Option("-t|--template", Description = "Search template")]
-        public string SearchTemplate { get; set; } = "*.*";
+        [Option("-a|--author", Description = "Search books by author")]
+        public string Author { get; set; }
+
+        [Option("-p|--publisher", Description = "Search books by publisher")]
+        public string Publisher { get; set; }
+
+        [Option("-t|--name", Description = "Search books by name")]
+        public string Name { get; set; }
 
         public void OnExecute()
-            => Console.WriteLine($"List command {PrintFullPath} `{SearchTemplate}`");
-    }
+        {
+            using (Stream stream = new FileStream(OutFile, FileMode.Create))
+            {
 
+                if (Name != null)
+                {
+                    xmlService.Export(stream, bookService
+                        .GetAll()
+                        .Where(e => e.Name == Name));
+                }
+                else if (Publisher != null)
+                { 
+                    xmlService.Export(stream, bookService.GetAllWherePublisherStarts(Publisher));
+                    
+                }
+                else if (Author != null)
+                {
+                    xmlService.Export(stream, bookService.GetAllByAuthor(Author));
+                    
+                }
+                else
+                {
+                    xmlService.Export(stream, bookService.GetAll());
+                }
+            }
+        }
+    }
 }

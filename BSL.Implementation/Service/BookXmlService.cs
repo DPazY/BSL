@@ -56,7 +56,7 @@ namespace BSL.Implementation.Service
                 _bookXmlRepository.Add(booksForRepository);
             }
         }
-        public Stream Export(Stream stream)
+        public Stream Export(Stream stream, IEnumerable<Book>? filteredBooks = null)
         {
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
 
@@ -70,7 +70,9 @@ namespace BSL.Implementation.Service
 
             ArgumentNullException.ThrowIfNull(catalog, nameof(catalog));
 
-            var booksFromRepository = _bookXmlRepository.GetAll<Book>().ToList();
+            var booksFromRepository = (filteredBooks == null) ?
+                _bookXmlRepository.GetAll<Book>().ToList() : filteredBooks.ToList();
+
 
             if (catalog.Books == null) catalog.Books = new List<BookXmlDto>();
 
