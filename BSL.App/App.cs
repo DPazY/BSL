@@ -4,7 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 namespace BSL.App
 {
 
-    [Subcommand(typeof(List))]
+    [Subcommand(typeof(List), typeof(Dump), typeof(Upload))]
     public class App
     {
         public void OnExecute(CommandLineApplication app)
