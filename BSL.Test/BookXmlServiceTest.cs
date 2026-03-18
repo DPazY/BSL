@@ -77,7 +77,7 @@ namespace BSL.Test
 
             _repositoryMock.Verify(r => r.Add(It.Is<IEnumerable<Book>>(books =>
                 books.First().Name == "Неизвестное название" &&
-                books.First().Author.Contains("Неизвестный") &&
+                books.First().Author.Contains("Неизвестный автор") &&
                 books.First().PublisherBook == "Неизвестное издательство" &&
                 books.First().YearBook == 1900)),
                 Times.Once);

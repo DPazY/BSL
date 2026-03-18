@@ -5,10 +5,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UserSecretsId>ad37cafb-f6eb-4f86-802a-8e5cd8c23320</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.Hosting.CommandLine" Version="5.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.5" />

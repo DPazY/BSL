@@ -1,4 +1,5 @@
-﻿using BSL.Models.Interface;
+﻿using BSL.Models;
+using BSL.Models.Interface;
 
 namespace BSL.Implementation.Repository
 {
@@ -11,17 +12,17 @@ namespace BSL.Implementation.Repository
             _repository = repository;
         }
 
-        public virtual void Add<T>(IEnumerable<T> editions)
+        public virtual void Add<T>(IEnumerable<T> editions) where T : Edition 
         {
             _repository.Add(editions);
         }
 
-        public virtual IEnumerable<T> GetAll<T>()
+        public virtual IEnumerable<T> GetAll<T>() where T : Edition
         {
             return _repository.GetAll<T>();
         }
 
-        public virtual void Remove<T>(IEnumerable<T> editions)
+        public virtual void Remove<T>(IEnumerable<T> editions) where T : Edition
         {
             _repository.Remove(editions);
         }

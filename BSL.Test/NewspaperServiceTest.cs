@@ -45,7 +45,7 @@ public class NewspaperServiceTest
         issn: "1562-2584"
     )
 };
-    private Mock<IRepository> GetRepositoryMoq<T>(List<T> res)
+    private Mock<IRepository> GetRepositoryMoq<T>(List<T> res) where T : Edition
     {
         var repositoryMoq = new Mock<IRepository>();
         repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);

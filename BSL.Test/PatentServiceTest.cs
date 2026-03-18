@@ -33,7 +33,7 @@ public class PatentServiceTest
             notes: null
         )
     };
-    private Mock<IRepository> GetPatentRepositoryMoq<T>(List<T> res)
+    private Mock<IRepository> GetPatentRepositoryMoq<T>(List<T> res) where T : Patent
     {
         var repositoryMoq = new Mock<IRepository>();
         repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);

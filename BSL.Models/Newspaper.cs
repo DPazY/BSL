@@ -1,8 +1,5 @@
 ﻿using ProtoBuf;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 
 namespace BSL.Models
 {
@@ -11,7 +8,7 @@ namespace BSL.Models
     {
         protected Newspaper() : base("") { }
         [SetsRequiredMembers]
-        public Newspaper(string name,string placeOfPublication, string publishingHouse, int numberOfPages, string? notes, uint issueNumber, DateOnly dataPublishing, string? issn) : base(name)
+        public Newspaper(string name, string placeOfPublication, string publishingHouse, int numberOfPages, string? notes, int issueNumber, DateOnly dataPublishing, string? issn) : base(name)
         {
             PlaceOfPublication = placeOfPublication;
             PublishingHouse = publishingHouse;
@@ -31,9 +28,9 @@ namespace BSL.Models
         [ProtoMember(4)]
         public string? Notes { get; init; }
         [ProtoMember(5)]
-        public uint IssueNumber { get; init; }
+        public int IssueNumber { get; init; }
         [ProtoMember(6)]
-        public required DateOnly DataPublishing {  get; init; }
+        public required DateOnly DataPublishing { get; init; }
         [ProtoMember(7)]
         public string? ISSN { get; init; }
 

@@ -12,10 +12,10 @@ namespace BSL.Test
         private readonly List<Book> books =
             [
                 new("Преступление и наказание", new DateOnly(2000, 1, 1), "БББ", "Толстой"),
-                new("Идиот", new DateOnly(2003, 1, 1), "аба", "Толстой Мартин"),
+                new("Идиот", new DateOnly(2003, 1, 1), "аба", "Толстой,Мартин"),
                 new("Песнь Льда и Пламени", new DateOnly(1978, 1, 1), "ААА", "Мартин")
             ];
-        private Mock<IRepository> GetRepositoryMoq<T>(List<T> res)
+        private Mock<IRepository> GetRepositoryMoq<T>(List<T> res) where T : Edition
         {
             var repositoryMoq = new Mock<IRepository>();
             repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);

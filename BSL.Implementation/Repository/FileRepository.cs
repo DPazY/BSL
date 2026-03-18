@@ -34,7 +34,7 @@ namespace BSL.Implementation.Repository
             _fileSystem.Path.Combine(_appSetings.WorkDirectory, $"{typeof(T).Name}s" + _appSetings.FileExtension));
         }
 
-        public IEnumerable<T> GetAll<T>()
+        public IEnumerable<T> GetAll<T>() where T : Edition
         {
             if (!_fileSystem.File.Exists(GetFilePath<T>()))
             {
@@ -43,7 +43,7 @@ namespace BSL.Implementation.Repository
             return LoadFromFile<T>();
         }
 
-        public void Add<T>(IEnumerable<T> editions)
+        public void Add<T>(IEnumerable<T> editions) where T : Edition
         {
             ArgumentNullException.ThrowIfNull(_serializerStrategy);
 
@@ -54,7 +54,7 @@ namespace BSL.Implementation.Repository
 
         }
 
-        public void Remove<T>(IEnumerable<T> editions)
+        public void Remove<T>(IEnumerable<T> editions) where T : Edition
         {
             var elements = GetAll<T>();
             var updateElements = elements.Except(editions).ToList();

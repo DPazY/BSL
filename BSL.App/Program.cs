@@ -1,5 +1,6 @@
 ﻿using BSL.App;
 using BSL.App.Service;
+using BSL.Implementation;
 using BSL.Implementation.Repository;
 using BSL.Implementation.SerializerStrategy;
 using BSL.Implementation.Service;
@@ -27,7 +28,8 @@ internal class Program
                 ["WorkDir"] = Environment.CurrentDirectory,
                 ["FileWatcher"] = Environment.CurrentDirectory,
                 ["ProcessedFile"] = "None"
-            });
+            })
+            .AddUserSecrets<Program>();
 
 
         configurationBuilder.AddJsonFile("AppConfig.json");
@@ -54,15 +56,16 @@ internal class Program
                 {
                     return new FileSystem();
                 });
+                Dapper.SqlMapper.AddTypeHandler(new StringListTypeHandler());
+                Dapper.SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+
                 serviceCollection.AddSingleton<IRepository>(provider =>
                 {
-                    var settings = provider.GetRequiredService<AppSettings>();
-                    var fileSystem = provider.GetRequiredService<IFileSystem>();
-                    var serializer = provider.GetRequiredService<ISerializerStrategy>();
+                    string connectionString = configuration["ConnectionString"];
 
-                    var repository = new FileRepository(fileSystem, settings, serializer);
+                    var postgresRepository = new PostgresRepository(connectionString);
 
-                    return new CachedRepository(repository);
+                    return new CachedRepository(postgresRepository);
                 });
 
                 if (args.Length == 0)

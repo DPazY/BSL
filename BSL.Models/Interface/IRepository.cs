@@ -3,9 +3,9 @@
 
     public interface IRepository
     {
-        IEnumerable<T> GetAll<T>();
-        void Add<T>(IEnumerable<T> editions);
-        void Remove<T>(IEnumerable<T> editions);
+        IEnumerable<T> GetAll<T>() where T : Edition;
+        void Add<T>(IEnumerable<T> editions) where T : Edition;
+        void Remove<T>(IEnumerable<T> editions) where T : Edition;
 
     }
 }

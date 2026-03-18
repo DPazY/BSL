@@ -10,14 +10,14 @@ namespace BSL.Models
         [SetsRequiredMembers]
         public Book(string name, DateOnly year, string publisher, string author) : base(name)
         {
-            if (year.Year >= 1900) YearBook = (uint)year.Year;
+            if (year.Year >= 1900) YearBook = year.Year;
             else throw new ArgumentOutOfRangeException(nameof(year));
             PublisherBook = publisher;
-            Author = author.Split(',', ' ', ';').Where(auth =>
+            Author = author.Split(',', ';').Where(auth =>
             !string.IsNullOrWhiteSpace(auth) && !string.IsNullOrWhiteSpace(auth)).ToList();
         }
         [ProtoMember(1)]
-        public uint YearBook { get; init; }
+        public int YearBook { get; init; }
         [ProtoMember(2)]
         public required string PublisherBook { get; init; }
         [ProtoMember(3)]
