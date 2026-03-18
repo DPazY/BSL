@@ -38,14 +38,14 @@ namespace BSL.App.Commands
                         .Where(e => e.Name == Name));
                 }
                 else if (Publisher != null)
-                { 
+                {
                     xmlService.Export(stream, bookService.GetAllWherePublisherStarts(Publisher));
-                    
+
                 }
                 else if (Author != null)
                 {
                     xmlService.Export(stream, bookService.GetAllByAuthor(Author));
-                    
+
                 }
                 else
                 {

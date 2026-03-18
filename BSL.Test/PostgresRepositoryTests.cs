@@ -22,6 +22,17 @@ namespace BSL.Test
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
+            var config = new ConfigurationBuilder()
+                .AddUserSecrets<PostgresRepositoryTests>()
+                .Build();
+
+            _testConnectionString = config["TestConnectionString"];
+
+            if (string.IsNullOrEmpty(_testConnectionString))
+            {
+                throw new InvalidOperationException("Секрет 'TestConnectionString' не найден. Убедитесь, что выполнили dotnet user-secrets set.");
+            }
+
             SqlMapper.AddTypeHandler(new StringListTypeHandler());
             SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
 
@@ -46,13 +57,6 @@ namespace BSL.Test
                     ISSN VARCHAR(50)
                 );
             ");
-
-            var config = new ConfigurationBuilder()
-                .AddUserSecrets<PostgresRepositoryTests>()
-                .Build();
-
-            // Достаем строку
-            _testConnectionString = config["TestConnectionString"];
         }
 
         [SetUp]
