@@ -7,8 +7,10 @@ namespace BSL.Implementation.Repository
     {
         private readonly object _locker = new();
         private readonly ConcurrentDictionary<Type, object> _dictRepository = new();
-        
-        public CachedRepository(IRepository innerRepository) : base(innerRepository) { }
+
+        public CachedRepository(IRepository innerRepository) : base(innerRepository)
+        {
+        }
 
         public override void Add<T>(IEnumerable<T> editions)
         {
@@ -34,7 +36,7 @@ namespace BSL.Implementation.Repository
                         return (IEnumerable<T>)_repository;
                     }
                     var dataFromFile = base.GetAll<T>();
-                    
+
                     _dictRepository[typeof(T)] = dataFromFile;
 
                     return dataFromFile;

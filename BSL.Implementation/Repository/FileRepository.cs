@@ -60,6 +60,12 @@ namespace BSL.Implementation.Repository
             var updateElements = elements.Except(editions).ToList();
             Add(updateElements);
         }
+
+        public T? GetByName<T>(string name) where T : Edition
+        {
+            var elements = GetAll<T>();
+            return elements.FirstOrDefault(e => e.Name == name);
+        }
     }
 }
 

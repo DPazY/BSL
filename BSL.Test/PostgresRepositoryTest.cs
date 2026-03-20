@@ -12,7 +12,7 @@ using System.Transactions;
 namespace BSL.Test
 {
     [TestFixture]
-    public class PostgresRepositoryTests
+    public class PostgresRepositoryTest
     {
         private string _testConnectionString;
 
@@ -23,7 +23,7 @@ namespace BSL.Test
         public void OneTimeSetUp()
         {
             var config = new ConfigurationBuilder()
-                .AddUserSecrets<PostgresRepositoryTests>()
+                .AddUserSecrets<PostgresRepositoryTest>()
                 .Build();
 
             _testConnectionString = config["TestConnectionString"];

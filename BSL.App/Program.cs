@@ -1,6 +1,7 @@
 ﻿using BSL.App;
 using BSL.App.Service;
 using BSL.Implementation;
+using BSL.Implementation.Metrics;
 using BSL.Implementation.Repository;
 using BSL.Implementation.SerializerStrategy;
 using BSL.Implementation.Service;
@@ -42,6 +43,22 @@ internal class Program
         ProcessedFileAction processedFile = Enum.Parse<ProcessedFileAction>(configuration.GetSection("ProcessedFile").Value);
 
         var host = Host.CreateDefaultBuilder();
+
+        host.ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.Configure(app =>
+            {
+                app.UseRouting();
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapGet("/api/test/books/{name}", (string name, IRepository repository) =>
+                    {
+                        return repository.GetByName<Book>(name);
+                    });
+                });
+            });
+        });
+
         if (args.Length > 0)
             host.UseCommandLineApplication<App>(args);
 
@@ -56,16 +73,24 @@ internal class Program
                 {
                     return new FileSystem();
                 });
+
+                serviceCollection.AddMetrics();
+                serviceCollection.AddSingleton<AppMetrics>();
+
                 Dapper.SqlMapper.AddTypeHandler(new StringListTypeHandler());
                 Dapper.SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
 
                 serviceCollection.AddSingleton<IRepository>(provider =>
                 {
                     string connectionString = configuration["ConnectionString"];
+                    
+                    var appMetrics = provider.GetRequiredService<AppMetrics>();
 
                     var postgresRepository = new PostgresRepository(connectionString);
+                    var cachedRepository = new CachedRepository(postgresRepository);
+                    var metricsRepository = new MetricsRepository(cachedRepository, appMetrics);
 
-                    return new CachedRepository(postgresRepository);
+                    return metricsRepository;
                 });
 
                 if (args.Length == 0)
@@ -83,11 +108,17 @@ internal class Program
             .ConfigureLogging(loggingBuilder =>
             {
                 loggingBuilder.AddConsole();
-                loggingBuilder.SetMinimumLevel(LogLevel.Debug);
+                loggingBuilder.SetMinimumLevel(LogLevel.Information);
             })
             .Build();
 
         if (args.Length > 0) await hostBuilded.RunCommandLineApplicationAsync();
-        else await hostBuilded.RunAsync();
+        else
+        {
+            using var meterProvider = MetricPublisihingHelpers
+                .GetMeterProvider(AppMetrics.MeterName, "http://localhost:9184/");
+
+            await hostBuilded.RunAsync();
+        }
     }
 }

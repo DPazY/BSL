@@ -22,6 +22,11 @@ namespace BSL.Implementation.Repository
             return _repository.GetAll<T>();
         }
 
+        public virtual T? GetByName<T>(string name) where T : Edition
+        { 
+            return _repository.GetByName<T>(name);
+        }
+
         public virtual void Remove<T>(IEnumerable<T> editions) where T : Edition
         {
             _repository.Remove(editions);
