@@ -29,7 +29,7 @@ namespace BSL.Implementation.Metrics
             {
                 new KeyValuePair<string, object?>("method.name", methodName),
                 new KeyValuePair<string, object?>("target.type", targetType), 
-                new KeyValuePair<string, object?>("cache.hit", isCacheHit)
+                new KeyValuePair<string, object?>("cache.hit", isCacheHit.ToString().ToLower())
             };
 
             _methodCallsCounter.Add(1, tags);

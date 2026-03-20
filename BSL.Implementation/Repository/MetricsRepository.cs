@@ -14,6 +14,7 @@ namespace BSL.Implementation.Repository
 
         public override IEnumerable<T> GetAll<T>()
         {
+            MetricsContext.IsCacheHit.Value = false;
             var stopWatch = Stopwatch.StartNew();
 
             var result = base.GetAll<T>();
@@ -55,6 +56,7 @@ namespace BSL.Implementation.Repository
 
         public override T? GetByName<T>(string name) where T : class
         {
+            MetricsContext.IsCacheHit.Value = false;
             var stopWatch = Stopwatch.StartNew();
 
             var result = base.GetByName<T>(name);
@@ -63,7 +65,9 @@ namespace BSL.Implementation.Repository
             _appMetrics.RecordMethodExecution(
                 methodName: "GetByName",
                 targetType: typeof(T).Name,
-                durationMs: stopWatch.Elapsed.TotalMilliseconds);
+                durationMs: stopWatch.Elapsed.TotalMilliseconds,
+                isCacheHit: MetricsContext.IsCacheHit.Value);
+
 
             return result;
         }

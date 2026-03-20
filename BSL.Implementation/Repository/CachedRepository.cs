@@ -1,4 +1,6 @@
-﻿using BSL.Models.Interface;
+﻿using BSL.Implementation.Metrics;
+using BSL.Models;
+using BSL.Models.Interface;
 using System.Collections.Concurrent;
 
 namespace BSL.Implementation.Repository
@@ -23,8 +25,11 @@ namespace BSL.Implementation.Repository
 
         public override IEnumerable<T> GetAll<T>()
         {
+            MetricsContext.IsCacheHit.Value = false;
+
             if (_dictRepository.TryGetValue(typeof(T), out var repository))
             {
+                MetricsContext.IsCacheHit.Value = true;
                 return (IEnumerable<T>)repository;
             }
             else
@@ -33,8 +38,10 @@ namespace BSL.Implementation.Repository
                 {
                     if (_dictRepository.TryGetValue(typeof(T), out var _repository))
                     {
+                        MetricsContext.IsCacheHit.Value = true;
                         return (IEnumerable<T>)_repository;
                     }
+
                     var dataFromFile = base.GetAll<T>();
 
                     _dictRepository[typeof(T)] = dataFromFile;
@@ -52,6 +59,11 @@ namespace BSL.Implementation.Repository
 
                 _dictRepository.TryRemove(typeof(T), out _);
             }
+        }
+        public override T? GetByName<T>(string name) where T : class
+        {
+            var allItems = this.GetAll<T>().ToList();
+            return allItems.FirstOrDefault(e => e.Name == name);
         }
     }
 }
