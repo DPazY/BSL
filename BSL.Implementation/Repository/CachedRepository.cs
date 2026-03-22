@@ -60,7 +60,7 @@ namespace BSL.Implementation.Repository
                 _dictRepository.TryRemove(typeof(T), out _);
             }
         }
-        public override T? GetByName<T>(string name) where T : class
+        public override T GetByName<T>(string name) where T : class
         {
             var allItems = this.GetAll<T>().ToList();
             return allItems.FirstOrDefault(e => e.Name == name);

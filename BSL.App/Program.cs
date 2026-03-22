@@ -87,8 +87,11 @@ internal class Program
                     var appMetrics = provider.GetRequiredService<AppMetrics>();
 
                     var postgresRepository = new PostgresRepository(connectionString);
-                    var cachedRepository = new CachedRepository(postgresRepository);
-                    var metricsRepository = new MetricsRepository(cachedRepository, appMetrics);
+
+                    //var cachedRepository = new CachedRepository(postgresRepository);
+                    var lruCachedRepository = new LruCachedRepository(postgresRepository);
+
+                    var metricsRepository = new MetricsRepository(lruCachedRepository, appMetrics);
 
                     return metricsRepository;
                 });

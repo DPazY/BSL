@@ -61,7 +61,7 @@ namespace BSL.Implementation.Repository
             Add(updateElements);
         }
 
-        public T? GetByName<T>(string name) where T : Edition
+        public T GetByName<T>(string name) where T : Edition
         {
             var elements = GetAll<T>();
             return elements.FirstOrDefault(e => e.Name == name);

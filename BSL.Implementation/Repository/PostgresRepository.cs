@@ -17,7 +17,7 @@ namespace BSL.Implementation.Repository
 
         private string GetTableName<T>() => $"{typeof(T).Name}s";
 
-        public T? GetByName<T>(string name) where T : Edition
+        public T GetByName<T>(string name) where T : Edition
         {
             using IDbConnection db = new NpgsqlConnection(_connectionString);
             string sql = $"SELECT * FROM {GetTableName<T>()} WHERE Name = @Name LIMIT 1";
