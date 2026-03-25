@@ -4,7 +4,7 @@ using BSL.Models.Interface;
 using FluentAssertions;
 using Moq;
 
-namespace BSL.Test;
+namespace BSL.Test.Service;
 
 public class EditionsServiceTest
 {

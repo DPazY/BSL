@@ -6,7 +6,7 @@ using FluentAssertions;
 using Moq;
 using System.Xml.Serialization;
 
-namespace BSL.Test
+namespace BSL.Test.Service
 {
     [TestFixture]
     public class BookXmlServiceTests

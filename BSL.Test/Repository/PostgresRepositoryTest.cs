@@ -5,11 +5,9 @@ using Dapper;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using NUnit.Framework;
-using System.Data;
 using System.Transactions;
 
-namespace BSL.Test
+namespace BSL.Test.Repository
 {
     [TestFixture]
     public class PostgresRepositoryTest

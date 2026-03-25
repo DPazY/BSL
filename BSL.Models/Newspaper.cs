@@ -15,8 +15,7 @@ namespace BSL.Models
             NumberOfPages = numberOfPages;
             Notes = notes;
             IssueNumber = issueNumber;
-            if (dataPublishing.Year >= 1900) DataPublishing = dataPublishing;
-            else throw new ArgumentOutOfRangeException();
+            DataPublishing = dataPublishing;
             ISSN = issn;
         }
         [ProtoMember(1)]
