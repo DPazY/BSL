@@ -89,10 +89,11 @@ internal class Program
                     var postgresRepository = new PostgresRepository(connectionString);
 
                     //var cachedRepository = new CachedRepository(postgresRepository);
-                    //var lruCachedRepository = new LruCachedRepository(postgresRepository);
-                    var ifsCachedRepository = new IfsCachedRepository(postgresRepository, telemetryAggregator, appMetrics, 100);
+                    var lruCachedRepository = new LruCachedRepository(postgresRepository);
+                    //var ifsCachedRepository = new IfsCachedRepository(postgresRepository, telemetryAggregator, appMetrics, 100);
 
-                    var metricsRepository = new MetricsRepository(ifsCachedRepository, appMetrics);
+                    //var metricsRepository = new MetricsRepository(ifsCachedRepository, appMetrics);
+                    var metricsRepository = new MetricsRepository(lruCachedRepository, appMetrics);
 
                     return metricsRepository;
                 });

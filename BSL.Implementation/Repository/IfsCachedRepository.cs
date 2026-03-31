@@ -66,7 +66,6 @@ namespace BSL.Implementation.Repository
                     Data = dataFromFile,
                     RequestRateLambda = 1.0,
                     FetchDurationMs = sw.Elapsed.TotalMilliseconds,
-                    // Предполагается, что метод EstimateSizeBytes у тебя реализован
                     SizeBytes = ObjectSizeApproximator.EstimateSizeBytes(dataFromFile),
                     Version = 1
                 };

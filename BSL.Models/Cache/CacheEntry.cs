@@ -20,6 +20,6 @@
         public int Version { get; set; }
 
         // Вычисление удельной полезности по условиям ККТ: \rho_i = (\lambda_i * t_i) / w_i
-        public double CalculateRho() => (RequestRateLambda * FetchDurationMs) / SizeBytes;
+        public double CalculateRho() => (RequestRateLambda * FetchDurationMs) / Math.Max(1, SizeBytes);
     }
 }
