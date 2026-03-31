@@ -8,12 +8,8 @@ using BSL.Implementation.Service;
 using BSL.Models;
 using BSL.Models.Enum;
 using BSL.Models.Interface;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Systemd;
 using Microsoft.Extensions.Hosting.WindowsServices;
-using Microsoft.Extensions.Logging;
 using System.IO.Abstractions;
 
 internal class Program
@@ -67,7 +63,7 @@ internal class Program
             {
                 serviceCollection.AddSingleton<IBookService, BookService>();
                 serviceCollection.AddSingleton<IXmlService, BookXmlService>();
-                serviceCollection.AddSingleton<AppSettings>(new AppSettings(workdir, fileWatcher, processedFile));
+                serviceCollection.AddSingleton(new AppSettings(workdir, fileWatcher, processedFile));
                 serviceCollection.AddSingleton<ISerializerStrategy, XmlSerializerStrategy>();
                 serviceCollection.AddSingleton<IFileSystem>(provider =>
                 {
@@ -77,24 +73,31 @@ internal class Program
                 serviceCollection.AddMetrics();
                 serviceCollection.AddSingleton<AppMetrics>();
 
+                serviceCollection.AddSingleton<ITelemetryAggregator, TelemetryAggregator>();
+                serviceCollection.AddSingleton<IIfsPredictor, IfsPredictor>();
+
                 Dapper.SqlMapper.AddTypeHandler(new StringListTypeHandler());
                 Dapper.SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
 
                 serviceCollection.AddSingleton<IRepository>(provider =>
                 {
                     string connectionString = configuration["ConnectionString"];
-                    
+
                     var appMetrics = provider.GetRequiredService<AppMetrics>();
+                    var telemetryAggregator = provider.GetRequiredService<ITelemetryAggregator>();
 
                     var postgresRepository = new PostgresRepository(connectionString);
 
                     //var cachedRepository = new CachedRepository(postgresRepository);
-                    var lruCachedRepository = new LruCachedRepository(postgresRepository);
+                    //var lruCachedRepository = new LruCachedRepository(postgresRepository);
+                    var ifsCachedRepository = new IfsCachedRepository(postgresRepository, telemetryAggregator, appMetrics, 100);
 
-                    var metricsRepository = new MetricsRepository(lruCachedRepository, appMetrics);
+                    var metricsRepository = new MetricsRepository(ifsCachedRepository, appMetrics);
 
                     return metricsRepository;
                 });
+
+                serviceCollection.AddHostedService<IfsBackgroundPrefetcher>();
 
                 if (args.Length == 0)
                 {
@@ -115,7 +118,11 @@ internal class Program
             })
             .Build();
 
-        if (args.Length > 0) await hostBuilded.RunCommandLineApplicationAsync();
+        if (args.Length > 0)
+        {
+            await hostBuilded.RunCommandLineApplicationAsync();
+            await hostBuilded.RunAsync();
+        }
         else
         {
             using var meterProvider = MetricPublisihingHelpers

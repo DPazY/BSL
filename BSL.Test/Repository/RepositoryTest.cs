@@ -87,7 +87,7 @@ namespace BSL.Test.Repository
                 Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
                 WriteIndented = false
             };
-            _appSettings = new AppSettings(_testPath, _testPath, Models.Enum.ProcessedFileAction.None, ".json");
+            _appSettings = new AppSettings(_testPath, _testPath, Models.Enum.ProcessedFileAction.None, 0, ".json");
         }
 
         [Test]
