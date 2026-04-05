@@ -12,7 +12,7 @@ namespace BSL.Implementation.Service
     {
         // Размер окна (Range block), по которому ищется паттерн.
         // Определяет чувствительность к краткосрочным всплескам.
-        private const int WindowSize = 5;
+        private const int WindowSize = 20;
 
         public double PredictNextLambda(double[] historicalLambdas)
         {

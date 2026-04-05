@@ -6,10 +6,17 @@ using System.Diagnostics;
 
 namespace BSL.Implementation.Repository
 {
+    /// <summary>
+    /// Интеллектуальный репозиторий с поддержкой IFS-предиктора и Cost-Aware вытеснения.
+    /// Реализует паттерн ленивой переоценки (Lazy Re-evaluation) для O(1) чтения в Highload.
+    /// </summary>
     public class IfsCachedRepository : RepositoryDecorator
     {
         private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
-        private readonly object _queueLock = new();
+
+        private readonly PriorityQueue<string, double> _evictionQueue = new();
+
+        private readonly object _heapLock = new();
 
         private readonly ITelemetryAggregator _telemetryAggregator;
 
@@ -30,13 +37,10 @@ namespace BSL.Implementation.Repository
         {
             string cacheKey = $"{typeof(T).Name}:{name}";
 
-            // 1. Асинхронная запись в телеметрию (должна использовать Channels или ConcurrentQueue внутри)
             _telemetryAggregator.RecordHit(cacheKey);
 
-            // 2. Lock-free чтение из кэша
             if (_cache.TryGetValue(cacheKey, out var entry))
             {
-                // 3. Атомарное увеличение счетчиков на уровне процессора (никаких lock!)
                 Interlocked.Increment(ref entry.HitCount);
 
                 MetricsContext.IsCacheHit.Value = true;
@@ -54,54 +58,63 @@ namespace BSL.Implementation.Repository
                 var newEntry = new CacheEntry
                 {
                     Data = dataFromFile,
-                    HitCount = 1,
+                    HitCount = 1, 
                     FetchDurationMs = sw.Elapsed.TotalMilliseconds,
                     SizeBytes = ObjectSizeApproximator.EstimateSizeBytes(dataFromFile)
                 };
 
                 EnsureMemoryCapacity(newEntry.SizeBytes);
 
-                _cache[cacheKey] = newEntry;
-                Interlocked.Add(ref _currentMemoryBytes, newEntry.SizeBytes);
+                if (_cache.TryAdd(cacheKey, newEntry))
+                {
+                    Interlocked.Add(ref _currentMemoryBytes, newEntry.SizeBytes);
+
+                    lock (_heapLock)
+                    {
+                        _evictionQueue.Enqueue(cacheKey, newEntry.CalculateRho());
+                    }
+                }
             }
 
             return dataFromFile;
         }
 
         /// <summary>
-        /// Ленивое вытеснение (Lazy Eviction) на основе удельной полезности.
-        /// Вызывается только при превышении лимита памяти (Cache Miss).
+        /// Реактивное вытеснение (ККТ-Eviction) с ленивой переоценкой.
         /// </summary>
-        /// <param name="requiredBytes">Требуемый объем памяти для нового элемента.</param>
         private void EnsureMemoryCapacity(long requiredBytes)
         {
             if (Interlocked.Read(ref _currentMemoryBytes) + requiredBytes <= _maxMemoryBytes)
                 return;
 
-            lock (_queueLock)
+            lock (_heapLock)
             {
-                if (Interlocked.Read(ref _currentMemoryBytes) + requiredBytes <= _maxMemoryBytes)
-                    return;
+                int loopBreaker = 0;
+                const int MaxSpins = 50;
 
-                var evictionCandidates = _cache
-                    .Select(kvp => new
-                    {
-                        Key = kvp.Key,
-                        Rho = kvp.Value.CalculateRho(),
-                        Size = kvp.Value.SizeBytes
-                    })
-                    .OrderBy(x => x.Rho)
-                    .ToList();
-
-                foreach (var candidate in evictionCandidates)
+                while (Interlocked.Read(ref _currentMemoryBytes) + requiredBytes > _maxMemoryBytes)
                 {
-                    if (_cache.TryRemove(candidate.Key, out var evictedEntry))
+                    if (!_evictionQueue.TryDequeue(out var candidateKey, out var oldRho))
                     {
-                        Interlocked.Add(ref _currentMemoryBytes, -evictedEntry.SizeBytes);
+                        break;
+                    }
 
-                        if (Interlocked.Read(ref _currentMemoryBytes) + requiredBytes <= _maxMemoryBytes)
+                    if (!_cache.TryGetValue(candidateKey, out var entry))
+                        continue;
+
+                    double actualRho = entry.CalculateRho();
+
+                    if (actualRho > oldRho + 0.0001 && loopBreaker < MaxSpins)
+                    {
+                        _evictionQueue.Enqueue(candidateKey, actualRho);
+                        loopBreaker++;
+                    }
+                    else
+                    {
+                        if (_cache.TryRemove(candidateKey, out var evictedEntry))
                         {
-                            break;
+                            Interlocked.Add(ref _currentMemoryBytes, -evictedEntry.SizeBytes);
+                            loopBreaker = 0;
                         }
                     }
                 }

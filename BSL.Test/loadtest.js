@@ -1,8 +1,8 @@
 ﻿import http from 'k6/http';
 import { sleep } from 'k6';
 import { SharedArray } from 'k6/data';
+import exec from 'k6/execution';
 
-// Загрузка датасета в общую память для всех VU
 const bookNames = new SharedArray('bookNames', function () {
     return open('./books_name.csv')
         .split('\n')
@@ -10,54 +10,61 @@ const bookNames = new SharedArray('bookNames', function () {
         .filter(s => s.length > 0 && s !== 'Name' && s !== 'name');
 });
 
-// Настройка профиля нагрузки (Stages) для симуляции фрактальных всплесков
 export const options = {
     stages: [
-        { duration: '30s', target: 20 },  // Warm-up: Плавный разгон до 20 пользователей
-        { duration: '10s', target: 150 }, // Burst: Резкий фрактальный всплеск (эффект толпы)
-        { duration: '50s', target: 150 }, // Plateau: Удержание пиковой нагрузки
-        { duration: '30s', target: 10 },  // Cool-down: Резкий спад
+        { duration: '30s', target: 20 },  // Разгон
+        { duration: '10s', target: 150 }, // Фрактальный всплеск (эффект толпы)
+        { duration: '50s', target: 150 }, // Удержание пиковой нагрузки
+        { duration: '30s', target: 10 },  // Спад
     ],
     thresholds: {
-        http_req_duration: ['p(95)<200'], // 95% запросов должны выполняться быстрее 200мс
+        http_req_duration: ['p(95)<200'],
     },
 };
 
 export default function () {
     const baseUrl = 'http://localhost:14450/api/test/books/';
-    const now = Date.now();
 
-    // Эмуляция "вирального" тренда (Fractal Anomaly)
-    // Допустим, время старта скрипта мы берем приблизительно, 
-    // но в k6 лучше опираться на вероятностные всплески для конкретных индексов.
+    // Вместо чистого Math.random() используем ID виртуального пользователя (VU) 
+    // и номер его итерации, чтобы создать детерминированную траекторию (динамическую систему)
+    const vuId = exec.vu.idInTest;
+    const iter = exec.vu.iterationInScenario;
 
-    let randomIndex;
-    const rand = Math.random();
+    let targetIndex;
 
-    // Генерируем "Внезапный тренд" на определенную книгу (например, индекс 105) 
-    // с вероятностью 30%, чтобы IFS-предиктор смог уловить градиент и сделать префетч
-    const isViralAnomaly = rand < 0.30;
-    const isPopular = rand >= 0.30 && rand < 0.85; // 55% на обычный топ
+    // Разбиваем поведение пользователя на циклы (например, по 10 итераций)
+    // Это создает точки притяжения (аттракторы), которые алгоритм может изучить
+    const patternStep = iter % 10;
 
-    const topCount = 100;
+    if (patternStep < 4) {
+        // 1. Паттерн "Связанная последовательность" (Пространственная локальность)
+        // Имитируем чтение серии книг (Том 1, Том 2, Том 3...).
+        // LRU даст промах (miss) на каждом новом томе.
+        // Математическая модель (IFS) уловит аффинное преобразование (X_n+1 = X_n + 1)
+        // и успеет положить следующие тома в кэш заранее.
+        const baseIndex = (vuId * 50) % (bookNames.length - 20);
+        targetIndex = baseIndex + patternStep;
 
-    if (isViralAnomaly) {
-        // Фокусная атака на 3 конкретные книги, которые изначально не в кэше
-        const viralIndices = [105, 106, 107];
-        randomIndex = viralIndices[Math.floor(Math.random() * viralIndices.length)];
-    } else if (isPopular) {
-        // Стандартное распределение Парето (горячий кэш)
-        randomIndex = Math.floor(Math.random() * topCount);
+    } else if (patternStep >= 4 && patternStep < 7) {
+        // 2. Классический "Горячий топ" (Парето)
+        // Даем LRU немного поработать в комфортных условиях, 
+        // имитируя обращения к главной странице или бестселлерам.
+        targetIndex = vuId % 30;
+
     } else {
-        // Длинный хвост (Long tail) - запросы к редким книгам (холодный кэш)
-        randomIndex = topCount + Math.floor(Math.random() * (bookNames.length - topCount));
+        // 3. Паттерн "Вымывание кэша" (Cache Churn / Scan Resistance)
+        // Имитируем фоновый процесс или бота, который сканирует каталог.
+        // Этот линейный проход быстро забьет ограниченный объем LRU-кэша, 
+        // вытеснив оттуда "Горячий топ". Когда цикл вернется к шагу 4, LRU снова даст miss.
+        // Интеллектуальный кэш должен распознать этот вектор как "не требующий долгого хранения".
+        targetIndex = Math.floor(bookNames.length / 2) + (iter % 200);
     }
 
-    const bookName = bookNames[randomIndex];
+    const bookName = bookNames[targetIndex];
 
-    // Выполняем HTTP GET запрос
     const res = http.get(baseUrl + encodeURIComponent(bookName));
 
-    // Небольшая задержка, чтобы имитировать реального пользователя
-    sleep(Math.random() * 0.2 + 0.1);
+    // Варьируем задержку: последовательные переходы (чтение томов) происходят быстрее
+    const sleepTime = (patternStep < 4) ? 0.05 : 0.2;
+    sleep(sleepTime);
 }

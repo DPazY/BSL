@@ -90,10 +90,10 @@ internal class Program
 
                     var postgresRepository = new PostgresRepository(connectionString);
 
-                    //var cachedRepository = new CachedRepository(postgresRepository);
-                    var lruCachedRepository = new LruCachedRepository(postgresRepository);
+                    var cachedRepository = new CachedRepository(postgresRepository);
+                    var lruCachedRepository = new LruCachedRepository(postgresRepository, 100);
 
-                    long cacheMemoryLimitBytes = 100 * 1024 * 1024;
+                    long cacheMemoryLimitBytes = 100 * 1024;
 
                     var ifsCachedRepository = new IfsCachedRepository(
                         postgresRepository,
@@ -105,10 +105,10 @@ internal class Program
                     return metricsRepository;
                 });
 
-                serviceCollection.AddHostedService<IfsBackgroundPrefetcher>();
 
                 if (args.Length == 0)
                 {
+                    serviceCollection.AddHostedService<IfsBackgroundPrefetcher>();
                     serviceCollection.AddHostedService<FileWatcher>();
                     serviceCollection.AddHostedService<BookProcessor>();
                     serviceCollection.AddSingleton<FileProcessingQueue>();

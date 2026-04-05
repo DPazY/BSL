@@ -16,7 +16,7 @@ namespace BSL.App.Service
         private readonly ILogger<IfsBackgroundPrefetcher> _logger;
 
         // Интервал дискретизации для математической модели (t = 2 сек)
-        private static readonly TimeSpan SamplingInterval = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan SamplingInterval = TimeSpan.FromMilliseconds(20);
 
         public IfsBackgroundPrefetcher(
             ITelemetryAggregator telemetryAggregator,

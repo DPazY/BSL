@@ -35,7 +35,7 @@ namespace BSL.Implementation.Repository
         /// </summary>
         /// <param name="repository">Базовый репозиторий для декорации.</param>
         /// <param name="capacity">Максимальная вместимость кэша.</param>
-        public LruCachedRepository(IRepository repository, int capacity = 1000) : base(repository)
+        public LruCachedRepository(IRepository repository, int capacity = 10) : base(repository)
         {
             _capacity = capacity;
             _cacheMap = new Dictionary<string, LinkedListNode<CacheItem>>(capacity);
