@@ -6,7 +6,7 @@ namespace BSL.Models
         string WorkDirectory,
         string FileWatcherDirectory,
         ProcessedFileAction ProcessedFileAction,
-        double PrefetchThreshold = 0,
+        double PrefetchThreshold = 5.0,
         string FileExtension = ".xml"
         );
     

@@ -24,7 +24,6 @@ namespace BSL.Test.Repository
             _repository = new IfsCachedRepository(
                 _innerRepositoryMock.Object,
                 _telemetryAggregatorMock.Object,
-                null,
                 MaxMemoryBytes);
         }
 

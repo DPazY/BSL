@@ -16,6 +16,8 @@ internal class Program
 {
     async private static Task Main(string[] args)
     {
+        ThreadPool.SetMinThreads(400, 400);
+
         var configurationBuilder = new ConfigurationBuilder();
 
         configurationBuilder
@@ -90,10 +92,15 @@ internal class Program
 
                     //var cachedRepository = new CachedRepository(postgresRepository);
                     var lruCachedRepository = new LruCachedRepository(postgresRepository);
-                    //var ifsCachedRepository = new IfsCachedRepository(postgresRepository, telemetryAggregator, appMetrics, 100);
 
-                    //var metricsRepository = new MetricsRepository(ifsCachedRepository, appMetrics);
-                    var metricsRepository = new MetricsRepository(lruCachedRepository, appMetrics);
+                    long cacheMemoryLimitBytes = 100 * 1024 * 1024;
+
+                    var ifsCachedRepository = new IfsCachedRepository(
+                        postgresRepository,
+                        telemetryAggregator,
+                        cacheMemoryLimitBytes);
+                    var metricsRepository = new MetricsRepository(ifsCachedRepository, appMetrics);
+                    //var metricsRepository = new MetricsRepository(lruCachedRepository, appMetrics);
 
                     return metricsRepository;
                 });
