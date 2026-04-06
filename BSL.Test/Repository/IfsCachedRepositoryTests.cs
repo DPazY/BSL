@@ -28,7 +28,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void GetByName_CacheMiss_FetchesFromInnerRepository_And_RecordsTelemetry()
+        public async Task GetByName_CacheMiss_FetchesFromInnerRepository_And_RecordsTelemetry()
         {
             var bookName = "CLR via C#";
             var expectedCompositeKey = $"Book:{bookName}";
@@ -36,9 +36,9 @@ namespace BSL.Test.Repository
 
             _innerRepositoryMock
                 .Setup(r => r.GetByName<Book>(bookName))
-                .Returns(expectedBook);
+                .ReturnsAsync(expectedBook);
 
-            var result = _repository.GetByName<Book>(bookName);
+            var result = await _repository.GetByName<Book>(bookName);
 
             result.Should().NotBeNull();
             result!.Name.Should().Be(bookName);
@@ -50,7 +50,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void GetByName_CacheHit_ReturnsFromMemory_And_DoesNotCallInnerRepositoryTwice()
+        public async Task GetByName_CacheHit_ReturnsFromMemory_And_DoesNotCallInnerRepositoryTwice()
         {
             var bookName = "C# in Depth";
             var expectedCompositeKey = $"Book:{bookName}";
@@ -58,11 +58,11 @@ namespace BSL.Test.Repository
 
             _innerRepositoryMock
                 .Setup(r => r.GetByName<Book>(bookName))
-                .Returns(expectedBook);
+                .ReturnsAsync(expectedBook);
 
-            var firstCallResult = _repository.GetByName<Book>(bookName);
+            var firstCallResult = await _repository.GetByName<Book>(bookName);
 
-            var secondCallResult = _repository.GetByName<Book>(bookName);
+            var secondCallResult = await _repository.GetByName<Book>(bookName);
 
             firstCallResult.Should().NotBeNull();
             secondCallResult.Should().NotBeNull();
@@ -78,17 +78,17 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void GetByName_WhenItemDoesNotExistInDb_ShouldReturnNull_And_NotCache()
+        public async Task GetByName_WhenItemDoesNotExistInDb_ShouldReturnNull_And_NotCache()
         {
             var bookName = "Несуществующая книга";
             var expectedCompositeKey = $"Book:{bookName}";
 
             _innerRepositoryMock
                 .Setup(r => r.GetByName<Book>(bookName))
-                .Returns((Book)null); 
+                .ReturnsAsync((Book)null); 
 
-            var firstCallResult = _repository.GetByName<Book>(bookName);
-            var secondCallResult = _repository.GetByName<Book>(bookName);
+            var firstCallResult = await _repository.GetByName<Book>(bookName);
+            var secondCallResult = await _repository.GetByName<Book>(bookName);
 
             firstCallResult.Should().BeNull();
             secondCallResult.Should().BeNull();

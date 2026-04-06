@@ -1,23 +1,15 @@
 ﻿using BSL.Implementation.Metrics;
-using BSL.Implementation.Repository;
 using BSL.Models;
 using BSL.Models.Interface;
-using System.Collections.Generic;
-using System.Threading;
 
 namespace BSL.Implementation.Repository
 {
-    /// <summary>
-    /// Репозиторий с кэшированием по стратегии LRU (Least Recently Used).
-    /// Используется в качестве базовой модели (baseline) для оценки производительности.
-    /// </summary>
     public class LruCachedRepository : RepositoryDecorator
     {
         private readonly int _capacity;
         private readonly Dictionary<string, LinkedListNode<CacheItem>> _cacheMap;
         private readonly LinkedList<CacheItem> _lruList;
-
-        private readonly ReaderWriterLockSlim _lock = new();
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private class CacheItem
         {
@@ -30,11 +22,6 @@ namespace BSL.Implementation.Repository
             }
         }
 
-        /// <summary>
-        /// Инициализирует новый экземпляр <see cref="LruCachedRepository"/>.
-        /// </summary>
-        /// <param name="repository">Базовый репозиторий для декорации.</param>
-        /// <param name="capacity">Максимальная вместимость кэша.</param>
         public LruCachedRepository(IRepository repository, int capacity = 10) : base(repository)
         {
             _capacity = capacity;
@@ -44,30 +31,24 @@ namespace BSL.Implementation.Repository
 
         private string GenerateKey<T>(string name) => $"{typeof(T).Name}_{name}";
 
-        public override T? GetByName<T>(string name) where T : class
+        public override async Task<T> GetByName<T>(string name) where T : class
         {
-            MetricsContext.IsCacheHit.Value = false;
             var cacheKey = GenerateKey<T>(name);
 
-            _lock.EnterUpgradeableReadLock();
+            await _semaphore.WaitAsync();
             try
             {
                 if (_cacheMap.TryGetValue(cacheKey, out var node))
                 {
-                    MetricsContext.IsCacheHit.Value = true;
-
-                    _lock.EnterWriteLock();
-                    try
+                    if (MetricsContext.Current.Value != null)
                     {
-                        if (node.List != null)
-                        {
-                            _lruList.Remove(node);
-                            _lruList.AddFirst(node);
-                        }
+                        MetricsContext.Current.Value.IsHit = true;
                     }
-                    finally
+
+                    if (node.List != null)
                     {
-                        _lock.ExitWriteLock();
+                        _lruList.Remove(node);
+                        _lruList.AddFirst(node);
                     }
 
                     return node.Value.Value as T;
@@ -75,29 +56,32 @@ namespace BSL.Implementation.Repository
             }
             finally
             {
-                _lock.ExitUpgradeableReadLock();
+                _semaphore.Release();
             }
 
-            var itemFromDb = base.GetByName<T>(name);
+            var itemFromDb = await base.GetByName<T>(name);
             if (itemFromDb != null)
             {
-                AddOrUpdateCache(cacheKey, itemFromDb as Edition);
+                await AddOrUpdateCacheAsync(cacheKey, itemFromDb as Edition);
             }
 
             return itemFromDb;
         }
 
-        private void AddOrUpdateCache(string key, Edition? item)
+        private async Task AddOrUpdateCacheAsync(string key, Edition? item)
         {
             if (item == null) return;
 
-            _lock.EnterWriteLock();
+            await _semaphore.WaitAsync();
             try
             {
                 if (_cacheMap.TryGetValue(key, out var existingNode))
                 {
-                    _lruList.Remove(existingNode);
-                    _lruList.AddFirst(existingNode);
+                    if (existingNode.List != null)
+                    {
+                        _lruList.Remove(existingNode);
+                        _lruList.AddFirst(existingNode);
+                    }
                     return;
                 }
 
@@ -117,13 +101,13 @@ namespace BSL.Implementation.Repository
             }
             finally
             {
-                _lock.ExitWriteLock();
+                _semaphore.Release();
             }
         }
 
-        public override void Remove<T>(IEnumerable<T> editions)
+        public override async Task Remove<T>(IEnumerable<T> editions)
         {
-            _lock.EnterWriteLock();
+            await _semaphore.WaitAsync();
             try
             {
                 foreach (var edition in editions)
@@ -131,22 +115,25 @@ namespace BSL.Implementation.Repository
                     var cacheKey = GenerateKey<T>(edition.Name);
                     if (_cacheMap.TryGetValue(cacheKey, out var node))
                     {
-                        _lruList.Remove(node);
+                        if (node.List != null)
+                        {
+                            _lruList.Remove(node);
+                        }
                         _cacheMap.Remove(cacheKey);
                     }
                 }
             }
             finally
             {
-                _lock.ExitWriteLock();
+                _semaphore.Release();
             }
-            base.Remove(editions);
+            await base.Remove(editions);
         }
 
-        public override void Add<T>(IEnumerable<T> editions)
+        public override async Task Add<T>(IEnumerable<T> editions)
         {
-            Remove(editions);
-            base.Add(editions);
+            await Remove(editions);
+            await base.Add(editions);
         }
     }
 }

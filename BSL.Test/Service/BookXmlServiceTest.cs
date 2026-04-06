@@ -31,10 +31,10 @@ namespace BSL.Test.Service
         }
 
         [Test]
-        public void Import_ShouldAddNewBooks_WhenTheyDoNotExistInRepository()
+        public async Task Import_ShouldAddNewBooks_WhenTheyDoNotExistInRepository()
         {
             var existingBook = new Book("Старая книга", new DateOnly(2000, 1, 1), "Издат", "Автор");
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(new List<Book> { existingBook });
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(new List<Book> { existingBook });
 
             var xmlBooks = new CatalogXmlDto()
             {
@@ -48,7 +48,7 @@ namespace BSL.Test.Service
             };
             using var stream = GetXmlStream(xmlBooks);
 
-            _service.Import(stream);
+            await _service.Import(stream);
 
             _repositoryMock.Verify(r => r.Add(It.Is<IEnumerable<Book>>(books =>
                 books.Count() == 2 &&
@@ -58,9 +58,9 @@ namespace BSL.Test.Service
         }
 
         [Test]
-        public void Import_ShouldUseDefaultValues_WhenXmlFieldsAreMissingOrInvalid()
+        public async Task Import_ShouldUseDefaultValues_WhenXmlFieldsAreMissingOrInvalid()
         {
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(new List<Book>());
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(new List<Book>());
 
             var xmlBooks = new CatalogXmlDto()
             {
@@ -73,7 +73,7 @@ namespace BSL.Test.Service
             };
             using var stream = GetXmlStream(xmlBooks);
 
-            _service.Import(stream);
+            await _service.Import(stream);
 
             _repositoryMock.Verify(r => r.Add(It.Is<IEnumerable<Book>>(books =>
                 books.First().Name == "Неизвестное название" &&
@@ -84,10 +84,10 @@ namespace BSL.Test.Service
         }
 
         [Test]
-        public void Import_ShouldNotAddNewBooks_WhenTheyAlreadyExistInRepository()
+        public async Task Import_ShouldNotAddNewBooks_WhenTheyAlreadyExistInRepository()
         {
             var existingBook = new Book("Идиот", new DateOnly(2000, 1, 1), "АСТ", "Достоевский");
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(new List<Book> { existingBook });
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(new List<Book> { existingBook });
 
             var xmlBooks = new CatalogXmlDto()
             {
@@ -98,15 +98,15 @@ namespace BSL.Test.Service
             };
             using var stream = GetXmlStream(xmlBooks);
 
-            _service.Import(stream);
+            await _service.Import(stream);
 
             _repositoryMock.Verify(r => r.Add(It.IsAny<IEnumerable<Book>>()), Times.Never);
         }
 
         [Test]
-        public void Import_ShouldIgnoreDuplicates_WithinTheXmlStream()
+        public async Task Import_ShouldIgnoreDuplicates_WithinTheXmlStream()
         {
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(new List<Book>());
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(new List<Book>());
 
             var xmlBooks = new CatalogXmlDto
             {
@@ -118,29 +118,29 @@ namespace BSL.Test.Service
             };
             using var stream = GetXmlStream(xmlBooks);
 
-            _service.Import(stream);
+            await _service.Import(stream);
 
             _repositoryMock.Verify(r => r.Add(It.Is<IEnumerable<Book>>(books => books.Count() == 1)), Times.Once);
         }
 
         [Test]
-        public void Import_ShouldNotCallAdd_WhenNoNewBooksAreFound()
+        public async Task Import_ShouldNotCallAdd_WhenNoNewBooksAreFound()
         {
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(new List<Book>());
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(new List<Book>());
 
             var xmlBooks = new CatalogXmlDto();
             using var stream = GetXmlStream(xmlBooks);
 
-            _service.Import(stream);
+            await _service.Import(stream);
 
             _repositoryMock.Verify(r => r.Add(It.IsAny<IEnumerable<Book>>()), Times.Never);
         }
 
         [Test]
-        public void Import_IntegrationTest_ShouldCorrectlyParseRealBooksXml()
+        public async Task Import_IntegrationTest_ShouldCorrectlyParseRealBooksXml()
         {
             var repositoryMock = new Mock<IRepository>();
-            repositoryMock.Setup(r => r.GetAll<Book>()).Returns(new List<Book>());
+            repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(new List<Book>());
 
             var service = new BookXmlService(repositoryMock.Object);
 
@@ -148,7 +148,7 @@ namespace BSL.Test.Service
 
             using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             {
-                service.Import(stream);
+                await service.Import(stream);
             }
 
             repositoryMock.Verify(r => r.Add(It.Is<IEnumerable<Book>>(books =>
@@ -160,22 +160,22 @@ namespace BSL.Test.Service
         [Test]
         public void Export_NullStream_ShouldThrowArgumentNullException()
         {
-            Action act = () => _service.Export(null!);
-            act.Should().Throw<ArgumentNullException>();
+            Func<Task> act = async () => await _service.Export(null!);
+            act.Should().ThrowAsync<ArgumentNullException>();
         }
 
         [Test]
-        public void Export_EmptyStream_ShouldWriteRepositoryBooksToStream()
+        public async Task Export_EmptyStream_ShouldWriteRepositoryBooksToStream()
         {
             var repoBooks = new List<Book>
             {
                 new Book("Уникальная книга 1", new DateOnly(2020, 1, 1), "Издат", "Автор")
              };
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(repoBooks);
 
             using var stream = new MemoryStream();
 
-            _service.Export(stream);
+            await _service.Export(stream);
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
@@ -188,7 +188,7 @@ namespace BSL.Test.Service
         }
 
         [Test]
-        public void Export_ExistingXml_ShouldAppendOnlyNewBooks()
+        public async Task Export_ExistingXml_ShouldAppendOnlyNewBooks()
         {
             var initialXml = new CatalogXmlDto()
             {
@@ -203,9 +203,9 @@ namespace BSL.Test.Service
             {
                 new Book("Новая книга", new DateOnly(2021, 5, 5), "Прес", "Новый Автор")
             };
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(repoBooks);
 
-            _service.Export(stream);
+            await _service.Export(stream);
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
@@ -217,7 +217,7 @@ namespace BSL.Test.Service
         }
 
         [Test]
-        public void Export_ExistingXml_ShouldNotAppendDuplicateBooks()
+        public async Task Export_ExistingXml_ShouldNotAppendDuplicateBooks()
         {
             var initialXml = new CatalogXmlDto()
             {
@@ -233,9 +233,9 @@ namespace BSL.Test.Service
                 new Book("Дубликат", new DateOnly(2021, 1, 1), "Прес", "Автор"),
                 new Book("Уникальная книга", new DateOnly(2022, 2, 2), "Прес", "Автор 2")
             };
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(repoBooks);
 
-            _service.Export(stream);
+            await _service.Export(stream);
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
@@ -247,14 +247,14 @@ namespace BSL.Test.Service
         }
 
         [Test]
-        public void Export_IntegrationTest_ShouldCorrectlyAppendToRealBooksXml()
+        public async Task Export_IntegrationTest_ShouldCorrectlyAppendToRealBooksXml()
         {
             var repoBooks = new List<Book>
             {
             new Book("Midnight Rain", new DateOnly(2000, 12, 16), "R & D", "Ralls, Kim"), 
             new Book("CLR via C#", new DateOnly(2012, 1, 1), "Microsoft", "Jeffrey Richter") 
             };
-            _repositoryMock.Setup(r => r.GetAll<Book>()).Returns(repoBooks);
+            _repositoryMock.Setup(r => r.GetAll<Book>()).ReturnsAsync(repoBooks);
 
             string filePath = "books.xml";
             byte[] fileBytes = File.ReadAllBytes(filePath);
@@ -263,7 +263,7 @@ namespace BSL.Test.Service
             stream.Write(fileBytes, 0, fileBytes.Length);
             stream.Position = 0;
 
-            _service.Export(stream);
+            await _service.Export(stream);
 
             stream.Position = 0;
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));

@@ -4,7 +4,7 @@ namespace BSL.Models.Interface
 {
     public interface INewspaperService
     {
-        IEnumerable<Newspaper> GetAll(OrderBy? orderBy = null);
+        Task<IEnumerable<Newspaper>> GetAll(OrderBy? orderBy = null);
     }
 
 }

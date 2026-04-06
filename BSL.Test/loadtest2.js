@@ -13,61 +13,59 @@ const bookNames = new SharedArray('bookNames', function () {
 
 export const options = {
     stages: [
-        { duration: '30s', target: 50 },  // Фаза 1: Фоновый шум (разогрев кэша "мусором")
-        { duration: '10s', target: 200 }, // Фаза 2: Резкий всплеск (начало вирусности)
-        { duration: '40s', target: 200 }, // Фаза 3: Удержание пика популярности
-        { duration: '20s', target: 10 },  // Фаза 4: Спад интереса
+        { duration: '30s', target: 50 },  // Фаза 1: Разгон и жесткое вымывание кэша
+        { duration: '30s', target: 200 }, // Фаза 2: Волна 1 (Аттрактор А)
+        { duration: '30s', target: 200 }, // Фаза 3: Волна 2 (Аттрактор B)
+        { duration: '30s', target: 200 }, // Фаза 4: Волна 3 (Аттрактор C)
+        { duration: '20s', target: 10 },  // Фаза 5: Спад
     ],
     thresholds: {
-        http_req_duration: ['p(95)<300'], // Допускаем легкую деградацию на старте
+        http_req_duration: ['p(95)<300'],
     },
 };
 
 export default function () {
     const baseUrl = 'http://localhost:14450/api/test/books/';
     const vuId = exec.vu.idInTest;
-
-    // Получаем время в миллисекундах с начала теста. 
-    // Это позволит синхронизировать всех VU для создания единого глобального спайка.
     const timeSinceStart = Date.now() - exec.scenario.startTime;
 
     let targetIndex;
     let sleepTime = 0.1;
 
-    // Индекс книги, которая станет "вирусной".
-    // Берем индекс из середины массива, чтобы он гарантированно 
-    // не лежал в LRU-кэше от фазы прогрева.
-    const viralBookIndex = Math.floor(bookNames.length / 2) + 42;
+    // Выбираем три разные книги, разбросанные по массиву, 
+    // чтобы исключить случайное попадание в горячий топ
+    const viralBook1 = Math.floor(bookNames.length * 0.3);
+    const viralBook2 = Math.floor(bookNames.length * 0.6);
+    const viralBook3 = Math.floor(bookNames.length * 0.9);
 
-    // Триггер вирусности срабатывает на 30-й секунде (когда начинается вторая стадия)
-    // и длится до 80-й секунды (конец третьей стадии).
-    if (timeSinceStart > 30000 && timeSinceStart < 80000) {
-
-        // Паттерн "Flash Crowd" (Формирование аттрактора)
-        // 85% всего трафика системы внезапно направляется на одну книгу.
+    // Логика каскадных аттракторов
+    if (timeSinceStart > 30000 && timeSinceStart <= 60000) {
+        // ВОЛНА 1
         if (Math.random() < 0.85) {
-            targetIndex = viralBookIndex;
-            // Уменьшаем sleep, так как вирусный трафик обычно более плотный
+            targetIndex = viralBook1;
             sleepTime = 0.05;
         } else {
-            // Оставшиеся 15% продолжают генерировать фоновый шум,
-            // чтобы LRU продолжал пытаться вытеснять старые данные
-            targetIndex = Math.floor(Math.random() * bookNames.length);
+            targetIndex = getBackgroundNoiseIndex(vuId);
         }
-
-    } else {
-
-        // Паттерн "Фоновый шум" (Фазы 1 и 4)
-        // Имитируем обычное поведение системы до и после инцидента.
-        // Распределение 80/20: 80% запросов идут к 20% каталога (вымывание кэша).
-        if (Math.random() < 0.2) {
-            // "Горячий топ" (первые 50 книг)
-            targetIndex = vuId % 50;
+    } else if (timeSinceStart > 60000 && timeSinceStart <= 90000) {
+        // ВОЛНА 2: Резкая смена тренда. LRU здесь получит второй удар.
+        if (Math.random() < 0.85) {
+            targetIndex = viralBook2;
+            sleepTime = 0.05;
         } else {
-            // "Длинный хвост" (случайное чтение всего каталога для вымывания LRU)
-            const tailSize = bookNames.length - 50;
-            targetIndex = 50 + Math.floor(Math.random() * tailSize);
+            targetIndex = getBackgroundNoiseIndex(vuId);
         }
+    } else if (timeSinceStart > 90000 && timeSinceStart <= 120000) {
+        // ВОЛНА 3: Третий тренд. База данных под LRU начинает задыхаться.
+        if (Math.random() < 0.85) {
+            targetIndex = viralBook3;
+            sleepTime = 0.05;
+        } else {
+            targetIndex = getBackgroundNoiseIndex(vuId);
+        }
+    } else {
+        // Фоновый режим
+        targetIndex = getBackgroundNoiseIndex(vuId);
     }
 
     // Защита от выхода за пределы массива
@@ -75,6 +73,17 @@ export default function () {
     const bookName = bookNames[targetIndex];
 
     const res = http.get(baseUrl + encodeURIComponent(bookName));
-
     sleep(sleepTime);
+}
+
+// Выносим генерацию шума в отдельную функцию для чистоты кода
+function getBackgroundNoiseIndex(vuId) {
+    // Агрессивное вымывание (10% топ, 90% сканирование хвоста).
+    // Это гарантирует, что LRU будет постоянно очищать память от полезных данных.
+    if (Math.random() < 0.1) {
+        return vuId % 50;
+    } else {
+        const tailSize = bookNames.length - 50;
+        return 50 + Math.floor(Math.random() * tailSize);
+    }
 }

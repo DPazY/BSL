@@ -3,9 +3,9 @@
 
     public interface IRepository
     {
-        IEnumerable<T> GetAll<T>() where T : Edition;
-        void Add<T>(IEnumerable<T> editions) where T : Edition;
-        void Remove<T>(IEnumerable<T> editions) where T : Edition;
-        public T GetByName<T>(string name) where T : Edition;
+        Task<IEnumerable<T>> GetAll<T>() where T : Edition;
+        Task Add<T>(IEnumerable<T> editions) where T : Edition;
+        Task Remove<T>(IEnumerable<T> editions) where T : Edition;
+        Task<T> GetByName<T>(string name) where T : Edition;
     }
 }

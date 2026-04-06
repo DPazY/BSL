@@ -47,17 +47,17 @@ public class NewspaperServiceTest
     private Mock<IRepository> GetRepositoryMoq<T>(List<T> res) where T : Edition
     {
         var repositoryMoq = new Mock<IRepository>();
-        repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);
+        repositoryMoq.Setup(repos => repos.GetAll<T>()).ReturnsAsync(res);
         return repositoryMoq;
     }
 
     [Test]
-    public void GetAll_ReturnNewspaperList()
+    public async Task GetAll_ReturnNewspaperList()
     {
         Mock<IRepository> repositoryMoq = GetRepositoryMoq<Newspaper>(newspapers);
 
         INewspaperService newspaperService = new NewspaperService(repositoryMoq.Object);
-        IEnumerable<Newspaper> result = newspaperService.GetAll();
+        IEnumerable<Newspaper> result = await newspaperService.GetAll();
         result.Should().BeEquivalentTo(newspapers);
 
     }
@@ -66,10 +66,10 @@ public class NewspaperServiceTest
     [Test]
     [TestCase(OrderBy.Asc)]
     [TestCase(OrderBy.Desc)]
-    public void GetAll_ReturnNewspaperListAscOrderByYear(OrderBy orderBy)
+    public async Task GetAll_ReturnNewspaperListAscOrderByYear(OrderBy orderBy)
     {
         INewspaperService bookService = new NewspaperService(GetRepositoryMoq(newspapers).Object);
-        IEnumerable<Newspaper> result = bookService.GetAll(OrderBy.Asc);
+        IEnumerable<Newspaper> result = await bookService.GetAll(OrderBy.Asc);
         result.Should().BeEquivalentTo(orderBy == OrderBy.Asc
             ? newspapers.OrderBy(newspaper => newspaper.DataPublishing.Year)
             : newspapers.OrderByDescending(newspaper => newspaper.DataPublishing.Year));

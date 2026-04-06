@@ -14,7 +14,7 @@ namespace BSL.Implementation.Service
         }
 
 
-        public void Import(Stream stream)
+        public async Task Import(Stream stream)
         {
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
             var catalog = (CatalogXmlDto?)serializer.Deserialize(stream);
@@ -22,7 +22,7 @@ namespace BSL.Implementation.Service
             if (catalog?.Books == null) return;
 
             var newBooksForRepository = new List<Book>();
-            var booksForRepository = _bookXmlRepository.GetAll<Book>().ToList();
+            var booksForRepository = (await _bookXmlRepository.GetAll<Book>()).ToList();
 
             var hashset = new HashSet<string>(booksForRepository.Select(b => b.Name));
            
@@ -56,7 +56,7 @@ namespace BSL.Implementation.Service
                 _bookXmlRepository.Add(booksForRepository);
             }
         }
-        public Stream Export(Stream stream, IEnumerable<Book>? filteredBooks = null)
+        public async Task<Stream> Export(Stream stream, IEnumerable<Book>? filteredBooks = null)
         {
             var serializer = new XmlSerializer(typeof(CatalogXmlDto));
 
@@ -71,7 +71,7 @@ namespace BSL.Implementation.Service
             ArgumentNullException.ThrowIfNull(catalog, nameof(catalog));
 
             var booksFromRepository = (filteredBooks == null) ?
-                _bookXmlRepository.GetAll<Book>().ToList() : filteredBooks.ToList();
+                (await _bookXmlRepository.GetAll<Book>()).ToList() : filteredBooks.ToList();
 
 
             if (catalog.Books == null) catalog.Books = new List<BookXmlDto>();

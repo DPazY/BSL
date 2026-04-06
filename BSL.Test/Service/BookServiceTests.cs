@@ -18,17 +18,17 @@ namespace BSL.Test.Service
         private Mock<IRepository> GetRepositoryMoq<T>(List<T> res) where T : Edition
         {
             var repositoryMoq = new Mock<IRepository>();
-            repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);
+            repositoryMoq.Setup(repos => repos.GetAll<T>()).ReturnsAsync(res);
             return repositoryMoq;
         }
 
         [Test]
-        public void GetAll_ReturnBookList()
+        public async Task GetAll_ReturnBookList()
         {
             Mock<IRepository> repositoryMoq = GetRepositoryMoq(books);
 
             IBookService bookService = new BookService(repositoryMoq.Object);
-            IEnumerable<Book> result = bookService.GetAll();
+            IEnumerable<Book> result = await bookService.GetAll();
             result.Should().BeEquivalentTo(books);
 
         }
@@ -37,31 +37,31 @@ namespace BSL.Test.Service
         [Test]
         [TestCase(OrderBy.Asc)]
         [TestCase(OrderBy.Desc)]
-        public void GetAll_ReturnBookListAscOrderByYear(OrderBy orderBy)
+        public async Task GetAll_ReturnBookListAscOrderByYear(OrderBy orderBy)
         {
             IBookService bookService = new BookService(GetRepositoryMoq(books).Object);
-            IEnumerable<Book> result = bookService.GetAll(OrderBy.Asc);
+            IEnumerable<Book> result = await bookService.GetAll(OrderBy.Asc);
             result.Should().BeEquivalentTo(orderBy == OrderBy.Asc
                 ? books.OrderBy(book => book.YearBook)
                 : books.OrderByDescending(book => book.YearBook));
         }
 
         [Test]
-        public void GetAllWherePublisherStarts_ReturnBookListStartWithPatternOrderByAsc()
+        public async Task GetAllWherePublisherStarts_ReturnBookListStartWithPatternOrderByAsc()
         {
             IBookService bookService = new BookService(GetRepositoryMoq(books).Object);
-            IEnumerable<Book> result1 = bookService.GetAllWherePublisherStarts("а");
-            IEnumerable<Book> result2 = bookService.GetAllWherePublisherStarts("аб");
+            IEnumerable<Book> result1 = await bookService.GetAllWherePublisherStarts("а");
+            IEnumerable<Book> result2 = await bookService.GetAllWherePublisherStarts("аб");
 
             result1.Should().BeEquivalentTo([books[2], books[1]]);
             result2.Should().BeEquivalentTo([books[1]]);
         }
         [Test]
-        public void GetAllAuthors_ReturnBookList()
+        public async Task GetAllAuthors_ReturnBookList()
         {
             IBookService bookService = new BookService(GetRepositoryMoq(books).Object);
-            IEnumerable<Book> result1 = bookService.GetAllByAuthor("Толстой");
-            IEnumerable<Book> result2 = bookService.GetAllByAuthor("Мартин");
+            IEnumerable<Book> result1 = await bookService.GetAllByAuthor("Толстой");
+            IEnumerable<Book> result2 = await bookService.GetAllByAuthor("Мартин");
 
             result1.Should().BeEquivalentTo([books[0], books[1]]);
             result2.Should().BeEquivalentTo([books[1], books[2]]);

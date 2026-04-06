@@ -1,7 +1,6 @@
 using BSL.Implementation.Service;
 using BSL.Models.Interface;
 using McMaster.Extensions.CommandLineUtils;
-using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 
 namespace BSL.App.Commands
@@ -26,30 +25,30 @@ namespace BSL.App.Commands
         [Option("-t|--name", Description = "Search books by name")]
         public string Name { get; set; }
 
-        public void OnExecute()
+        public async Task OnExecute()
         {
             using (Stream stream = new FileStream(OutFile, FileMode.Create))
             {
 
                 if (Name != null)
                 {
-                    xmlService.Export(stream, bookService
-                        .GetAll()
+                    await xmlService.Export(stream, (await bookService
+                        .GetAll())
                         .Where(e => e.Name == Name));
                 }
                 else if (Publisher != null)
                 {
-                    xmlService.Export(stream, bookService.GetAllWherePublisherStarts(Publisher));
+                    await xmlService.Export(stream, await bookService.GetAllWherePublisherStarts(Publisher));
 
                 }
                 else if (Author != null)
                 {
-                    xmlService.Export(stream, bookService.GetAllByAuthor(Author));
+                    await xmlService.Export(stream, await bookService.GetAllByAuthor(Author));
 
                 }
                 else
                 {
-                    xmlService.Export(stream, bookService.GetAll());
+                    await xmlService.Export(stream, await bookService.GetAll());
                 }
             }
         }

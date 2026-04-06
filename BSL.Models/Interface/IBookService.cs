@@ -4,8 +4,8 @@ namespace BSL.Models.Interface
 {
     public interface IBookService
     {
-        IEnumerable<Book> GetAll(OrderBy? orderByYear = null);
-        IEnumerable<Book> GetAllByAuthor(string v);
-        IEnumerable<Book> GetAllWherePublisherStarts(string pattern);
+        Task<IEnumerable<Book>> GetAll(OrderBy? orderByYear = null);
+        Task<IEnumerable<Book>> GetAllByAuthor(string v);
+        Task<IEnumerable<Book>> GetAllWherePublisherStarts(string pattern);
     }
 }

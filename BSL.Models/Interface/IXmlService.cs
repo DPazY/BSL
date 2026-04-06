@@ -2,7 +2,7 @@
 {
     public interface IXmlService
     {
-        void Import(Stream stream);
-        Stream Export(Stream stream, IEnumerable<Book>? filteredBooks = null);
+        Task Import(Stream stream);
+        Task<Stream> Export(Stream stream, IEnumerable<Book>? filteredBooks = null);
     }
 }

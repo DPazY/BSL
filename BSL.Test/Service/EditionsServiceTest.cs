@@ -70,9 +70,9 @@ public class EditionsServiceTest
     private Mock<IRepository> GetRepositoryMoq(List<Edition> res)
     {
         var repositoryMoq = new Mock<IRepository>();
-        repositoryMoq.Setup(repos => repos.GetAll<Book>()).Returns(res.OfType<Book>());
-        repositoryMoq.Setup(repos => repos.GetAll<Newspaper>()).Returns(res.OfType<Newspaper>());
-        repositoryMoq.Setup(repos => repos.GetAll<Patent>()).Returns(res.OfType<Patent>());
+        repositoryMoq.Setup(repos => repos.GetAll<Book>()).ReturnsAsync(res.OfType<Book>());
+        repositoryMoq.Setup(repos => repos.GetAll<Newspaper>()).ReturnsAsync(res.OfType<Newspaper>());
+        repositoryMoq.Setup(repos => repos.GetAll<Patent>()).ReturnsAsync(res.OfType<Patent>());
         return repositoryMoq;
     }
 
@@ -80,10 +80,10 @@ public class EditionsServiceTest
     [TestCase("Идиот")]
     [TestCase("Песнь Льда и Пламени")]
     [TestCase("The New York Times")]
-    public void SearchByName_ReturnEditionList(string name)
+    public async Task SearchByName_ReturnEditionList(string name)
     {
         IEditionService editionService = new EditionService(GetRepositoryMoq(editions).Object);
-        IEnumerable<Edition> result = editionService.SearchByName(name);
+        IEnumerable<Edition> result = await editionService.SearchByName(name);
 
         result.Should().BeEquivalentTo((editions.Where(b => b.Name == name)));
     }

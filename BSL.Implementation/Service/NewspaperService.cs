@@ -8,13 +8,15 @@ namespace BSL.Implementation.Service
     {
         public NewspaperService(IRepository newspaperRepository): base(newspaperRepository) { }
 
-        public IEnumerable<Newspaper> GetAll(OrderBy? orderBy = null)
+        public async Task<IEnumerable<Newspaper>> GetAll(OrderBy? orderBy = null)
         {
             return orderBy switch
             {
-                OrderBy.Asc => _editionRepository.GetAll<Newspaper>().OrderBy(b => b.DataPublishing.Year),
-                OrderBy.Desc => _editionRepository.GetAll<Newspaper>().OrderByDescending(b => b.DataPublishing.Year),
-                _ => _editionRepository.GetAll<Newspaper>()
+                OrderBy.Asc => (await _editionRepository.GetAll<Newspaper>())
+                .OrderBy(b => b.DataPublishing.Year),
+                OrderBy.Desc => (await _editionRepository.GetAll<Newspaper>())
+                .OrderByDescending(b => b.DataPublishing.Year),
+                _ => await _editionRepository.GetAll<Newspaper>()
             };
         }
     }

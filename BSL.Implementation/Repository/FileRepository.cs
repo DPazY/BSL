@@ -20,12 +20,16 @@ namespace BSL.Implementation.Repository
             _appSetings = appSetings;
             _serializerStrategy = serializerStrategy;
         }
-        private IEnumerable<T> LoadFromFile<T>()
+
+        private async Task<IEnumerable<T>> LoadFromFile<T>()
         {
             ArgumentNullException.ThrowIfNull(_serializerStrategy);
 
-            using var stream = _fileSystem.File.OpenRead(GetFilePath<T>());
-            return _serializerStrategy.Deserialize<T>(stream);
+            return await Task.Run(() =>
+            {
+                using var stream = _fileSystem.File.OpenRead(GetFilePath<T>());
+                return _serializerStrategy.Deserialize<T>(stream);
+            });
         }
 
         private string GetFilePath<T>()
@@ -34,39 +38,38 @@ namespace BSL.Implementation.Repository
             _fileSystem.Path.Combine(_appSetings.WorkDirectory, $"{typeof(T).Name}s" + _appSetings.FileExtension));
         }
 
-        public IEnumerable<T> GetAll<T>() where T : Edition
+        public async Task<IEnumerable<T>> GetAll<T>() where T : Edition
         {
             if (!_fileSystem.File.Exists(GetFilePath<T>()))
             {
                 return Enumerable.Empty<T>();
             }
-            return LoadFromFile<T>();
+            return await LoadFromFile<T>();
         }
 
-        public void Add<T>(IEnumerable<T> editions) where T : Edition
+        public async Task Add<T>(IEnumerable<T> editions) where T : Edition
         {
             ArgumentNullException.ThrowIfNull(_serializerStrategy);
 
-            _fileSystem.File.Delete(GetFilePath<T>());
-            using var fileCreated = _fileSystem.File.Create(GetFilePath<T>());
-
-            _serializerStrategy.Serialize(editions, fileCreated);
-
+            await Task.Run(() =>
+            {
+                _fileSystem.File.Delete(GetFilePath<T>());
+                using var fileCreated = _fileSystem.File.Create(GetFilePath<T>());
+                _serializerStrategy.Serialize(editions, fileCreated);
+            });
         }
 
-        public void Remove<T>(IEnumerable<T> editions) where T : Edition
+        public async Task Remove<T>(IEnumerable<T> editions) where T : Edition
         {
-            var elements = GetAll<T>();
+            var elements = await GetAll<T>();
             var updateElements = elements.Except(editions).ToList();
-            Add(updateElements);
+            await Add(updateElements);
         }
 
-        public T GetByName<T>(string name) where T : Edition
+        public async Task<T?> GetByName<T>(string name) where T : Edition
         {
-            var elements = GetAll<T>();
+            var elements = await GetAll<T>();
             return elements.FirstOrDefault(e => e.Name == name);
         }
     }
 }
-
-

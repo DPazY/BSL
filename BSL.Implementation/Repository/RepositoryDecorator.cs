@@ -12,24 +12,24 @@ namespace BSL.Implementation.Repository
             _repository = repository;
         }
 
-        public virtual void Add<T>(IEnumerable<T> editions) where T : Edition 
+        public virtual async Task Add<T>(IEnumerable<T> editions) where T : Edition 
         {
-            _repository.Add(editions);
+            await _repository.Add(editions);
         }
 
-        public virtual IEnumerable<T> GetAll<T>() where T : Edition
+        public virtual async Task<IEnumerable<T>> GetAll<T>() where T : Edition
         {
-            return _repository.GetAll<T>();
+            return await _repository.GetAll<T>();
         }
 
-        public virtual T? GetByName<T>(string name) where T : Edition
+        public virtual async Task<T> GetByName<T>(string name) where T : Edition
         { 
-            return _repository.GetByName<T>(name);
+            return await _repository.GetByName<T>(name);
         }
 
-        public virtual void Remove<T>(IEnumerable<T> editions) where T : Edition
+        public virtual async Task Remove<T>(IEnumerable<T> editions) where T : Edition
         {
-            _repository.Remove(editions);
+            await _repository.Remove(editions);
         }
     }
 }

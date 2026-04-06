@@ -16,8 +16,6 @@ internal class Program
 {
     async private static Task Main(string[] args)
     {
-        ThreadPool.SetMinThreads(400, 400);
-
         var configurationBuilder = new ConfigurationBuilder();
 
         configurationBuilder
@@ -49,9 +47,9 @@ internal class Program
                 app.UseRouting();
                 app.UseEndpoints(endpoints =>
                 {
-                    endpoints.MapGet("/api/test/books/{name}", (string name, IRepository repository) =>
+                    endpoints.MapGet("/api/test/books/{name}", async (string name, IRepository repository) =>
                     {
-                        return repository.GetByName<Book>(name);
+                        return await repository.GetByName<Book>(name);
                     });
                 });
             });

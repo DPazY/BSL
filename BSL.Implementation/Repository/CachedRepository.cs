@@ -1,5 +1,4 @@
 ﻿using BSL.Implementation.Metrics;
-using BSL.Models;
 using BSL.Models.Interface;
 using System.Collections.Concurrent;
 
@@ -7,62 +6,85 @@ namespace BSL.Implementation.Repository
 {
     public class CachedRepository : RepositoryDecorator
     {
-        private readonly object _locker = new();
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly ConcurrentDictionary<Type, object> _dictRepository = new();
 
         public CachedRepository(IRepository innerRepository) : base(innerRepository)
         {
         }
 
-        public override void Add<T>(IEnumerable<T> editions)
+        public override async Task Add<T>(IEnumerable<T> editions)
         {
-            lock (_locker)
+            await _semaphore.WaitAsync();
+            try
             {
-                base.Add(editions);
-                _dictRepository.TryRemove(typeof(T), out var _);
+                await base.Add(editions);
+                _dictRepository.TryRemove(typeof(T), out _);
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
-        public override IEnumerable<T> GetAll<T>()
+        public override async Task<IEnumerable<T>> GetAll<T>()
         {
-            MetricsContext.IsCacheHit.Value = false;
+            MetricsContext.Current.Value = new CacheMetricState { IsHit = false };
 
             if (_dictRepository.TryGetValue(typeof(T), out var repository))
             {
-                MetricsContext.IsCacheHit.Value = true;
+                if (MetricsContext.Current.Value != null)
+                {
+                    MetricsContext.Current.Value.IsHit = true;
+                }
+
                 return (IEnumerable<T>)repository;
             }
             else
             {
-                lock (_locker)
+                await _semaphore.WaitAsync();
+                try
                 {
                     if (_dictRepository.TryGetValue(typeof(T), out var _repository))
                     {
-                        MetricsContext.IsCacheHit.Value = true;
+                        if (MetricsContext.Current.Value != null)
+                        {
+                            MetricsContext.Current.Value.IsHit = true;
+                        }
+                        
                         return (IEnumerable<T>)_repository;
                     }
 
-                    var dataFromFile = base.GetAll<T>();
+                    var dataFromFile = await base.GetAll<T>();
 
                     _dictRepository[typeof(T)] = dataFromFile;
 
                     return dataFromFile;
                 }
+                finally
+                {
+                    _semaphore.Release();
+                }
             }
         }
 
-        public override void Remove<T>(IEnumerable<T> editions)
+        public override async Task Remove<T>(IEnumerable<T> editions)
         {
-            lock (_locker)
+            await _semaphore.WaitAsync();
+            try
             {
-                base.Remove(editions);
-
+                await base.Remove(editions);
                 _dictRepository.TryRemove(typeof(T), out _);
             }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
-        public override T GetByName<T>(string name) where T : class
+
+        public override async Task<T> GetByName<T>(string name)
         {
-            var allItems = this.GetAll<T>().ToList();
+            var allItems = await this.GetAll<T>();
             return allItems.FirstOrDefault(e => e.Name == name);
         }
     }

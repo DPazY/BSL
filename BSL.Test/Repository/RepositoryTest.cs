@@ -91,7 +91,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void GetAll_WhenFileExists_Json_ReturnCorrectCount()
+        public async Task GetAll_WhenFileExists_Json_ReturnCorrectCount()
         {
             var line1 = "{\"name\":\"Комсомольская правда\",\"placeOfPublication\":\"Москва\",\"publishingHouse\":\"ИД «Комсомольская правда»\",\"numberOfPages\":16,\"notes\":\"Ежедневная общественно-политическая газета\",\"issueNumber\":15430,\"dataPublishing\":\"2023-10-05\",\"issn\":\"0233-4399\"}";
             var line2 = "{\"name\":\"The New York Times\",\"placeOfPublication\":\"Нью-Йорк, США\",\"publishingHouse\":\"The New York Times Company\",\"numberOfPages\":64,\"notes\":null,\"issueNumber\":58201,\"dataPublishing\":\"2003-10-05\",\"issn\":\"0362-4331\"}";
@@ -101,7 +101,7 @@ namespace BSL.Test.Repository
             var fileRepo = new FileRepository(_mockFileSystem, _appSettings, new JsonSerializerStrategy(_jsonOptions));
             var repo = new CachedRepository(fileRepo);
 
-            var result = repo.GetAll<Newspaper>();
+            var result = await repo.GetAll<Newspaper>();
 
             Assert.That(result.Count, Is.EqualTo(3));
             result.Should().BeEquivalentTo(new[] { editions[0], editions[1], editions[2] });
@@ -109,7 +109,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void Add_Json_ShouldSaveToFileInOneLine()
+        public async Task Add_Json_ShouldSaveToFileInOneLine()
         {
             var fileRepo = new FileRepository(_mockFileSystem, _appSettings, new JsonSerializerStrategy(_jsonOptions));
             var repo = new CachedRepository(fileRepo);
@@ -124,7 +124,7 @@ namespace BSL.Test.Repository
                 dataPublishing: new DateOnly(2023, 10, 5),
                 issn: "0233-4399"
             ) };
-            repo.Add(newItem);
+            await repo.Add(newItem);
 
             var fileLines = _mockFileSystem.File.ReadAllLines(_mockFileSystem.Path.Combine(_testPath, $"Newspapers" + _appSettings.FileExtension));
             Assert.That(fileLines.Length, Is.EqualTo(1));
@@ -133,7 +133,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void Remove_ShouldDeleteSpecificItemsFromFile_Json()
+        public async Task Remove_ShouldDeleteSpecificItemsFromFile_Json()
         {
             var item1 = new Newspaper("Газета 1", "Москва", "Дом 1", 10, null, 1, new DateOnly(2000, 1, 1), "111");
             var item2 = new Newspaper("Газета 2", "Питер", "Дом 2", 20, null, 2, new DateOnly(2010, 1, 1), "222");
@@ -149,7 +149,7 @@ namespace BSL.Test.Repository
 
             var itemsToRemove = new List<Newspaper> { item2 };
 
-            repo.Remove(itemsToRemove);
+            await repo.Remove(itemsToRemove);
 
             var fileLines = _mockFileSystem.File.ReadAllLines(_mockFileSystem.Path.Combine(_testPath, $"Newspapers" + _appSettings.FileExtension));
 
@@ -165,7 +165,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void GetAll_WhenFileExists_Protobuf_ReturnCorrectCount()
+        public async Task GetAll_WhenFileExists_Protobuf_ReturnCorrectCount()
         {
             var strategy = new ProtobufSerializerStrategy();
             using var ms = new MemoryStream();
@@ -178,14 +178,14 @@ namespace BSL.Test.Repository
             var fileRepo = new FileRepository(_mockFileSystem, _appSettings, strategy);
             var repo = new CachedRepository(fileRepo);
 
-            var result = repo.GetAll<Newspaper>().ToList();
+            var result = (await repo.GetAll<Newspaper>()).ToList();
 
             Assert.That(result.Count, Is.EqualTo(3));
             result.Should().BeEquivalentTo(new[] { editions[0], editions[1], editions[2] });
         }
 
         [Test]
-        public void Add_Protobuf_ShouldSaveToBinaryFile()
+        public async Task Add_Protobuf_ShouldSaveToBinaryFile()
         {
             var strategy = new ProtobufSerializerStrategy();
             var fileRepo = new FileRepository(_mockFileSystem, _appSettings, strategy);
@@ -194,7 +194,7 @@ namespace BSL.Test.Repository
             var newItem = new List<Newspaper> { (Newspaper)editions[0] };
             var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers" + _appSettings.FileExtension);
 
-            repo.Add(newItem);
+            await repo.Add(newItem);
 
             Assert.That(_mockFileSystem.FileExists(filePath), Is.True);
 
@@ -209,7 +209,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void Remove_ShouldDeleteSpecificItemsFromFile_Protobuf()
+        public async Task Remove_ShouldDeleteSpecificItemsFromFile_Protobuf()
         {
             var item1 = new Newspaper("Газета 1", "Москва", "Дом 1", 10, null, 1, new DateOnly(2000, 1, 1), "111");
             var item2 = new Newspaper("Газета 2", "Питер", "Дом 2", 20, null, 2, new DateOnly(2010, 1, 1), "222");
@@ -229,7 +229,7 @@ namespace BSL.Test.Repository
 
             var itemsToRemove = new List<Newspaper> { item2 };
 
-            repo.Remove(itemsToRemove);
+            await repo.Remove(itemsToRemove);
 
             var fileBytes = _mockFileSystem.File.ReadAllBytes(filePath);
             using var resultStream = new MemoryStream(fileBytes);
@@ -247,7 +247,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void GetAll_WhenFileExists_Xml_ReturnCorrectCount()
+        public async Task GetAll_WhenFileExists_Xml_ReturnCorrectCount()
         {
             var strategy = new XmlSerializerStrategy();
             using var ms = new MemoryStream();
@@ -261,14 +261,14 @@ namespace BSL.Test.Repository
             var fileRepo = new FileRepository(_mockFileSystem, _appSettings, strategy);
             var repo = new CachedRepository(fileRepo);
 
-            var result = repo.GetAll<Newspaper>().ToList();
+            var result = (await repo.GetAll<Newspaper>()).ToList();
 
             Assert.That(result.Count, Is.EqualTo(3));
             result.Should().BeEquivalentTo(new[] { editions[0], editions[1], editions[2] });
         }
 
         [Test]
-        public void Add_Xml_ShouldSaveToFile()
+        public async Task Add_Xml_ShouldSaveToFile()
         {
             var strategy = new XmlSerializerStrategy();
             var fileRepo = new FileRepository(_mockFileSystem, _appSettings, strategy);
@@ -277,7 +277,7 @@ namespace BSL.Test.Repository
             var newItem = new List<Newspaper> { (Newspaper)editions[0] };
             var filePath = _mockFileSystem.Path.Combine(_testPath, "Newspapers" + _appSettings.FileExtension);
 
-            repo.Add(newItem);
+            await repo.Add(newItem);
 
             Assert.That(_mockFileSystem.FileExists(filePath), Is.True);
 
@@ -292,7 +292,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void Remove_ShouldDeleteSpecificItemsFromFile_Xml()
+        public async Task Remove_ShouldDeleteSpecificItemsFromFile_Xml()
         {
             var item1 = new Newspaper("Газета 1", "Москва", "Дом 1", 10, null, 1, new DateOnly(2000, 1, 1), "111");
             var item2 = new Newspaper("Газета 2", "Питер", "Дом 2", 20, null, 2, new DateOnly(2010, 1, 1), "222");
@@ -313,7 +313,7 @@ namespace BSL.Test.Repository
 
             var itemsToRemove = new List<Newspaper> { item2 };
 
-            repo.Remove(itemsToRemove);
+            await repo.Remove(itemsToRemove);
 
             var fileBytes = _mockFileSystem.File.ReadAllBytes(filePath);
             using var resultStream = new MemoryStream(fileBytes);

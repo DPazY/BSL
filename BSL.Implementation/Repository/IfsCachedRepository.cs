@@ -33,7 +33,7 @@ namespace BSL.Implementation.Repository
             _maxMemoryBytes = maxMemoryBytes;
         }
 
-        public override T? GetByName<T>(string name) where T : class
+        public override async Task<T> GetByName<T>(string name) where T : class
         {
             string cacheKey = $"{typeof(T).Name}:{name}";
 
@@ -43,14 +43,16 @@ namespace BSL.Implementation.Repository
             {
                 Interlocked.Increment(ref entry.HitCount);
 
-                MetricsContext.IsCacheHit.Value = true;
+                if (MetricsContext.Current.Value != null)
+                {
+                    MetricsContext.Current.Value.IsHit = true;
+                }
                 return entry.Data as T;
             }
 
-            MetricsContext.IsCacheHit.Value = false;
             var sw = Stopwatch.StartNew();
 
-            var dataFromFile = base.GetByName<T>(name);
+            var dataFromFile =await base.GetByName<T>(name);
             sw.Stop();
 
             if (dataFromFile != null)

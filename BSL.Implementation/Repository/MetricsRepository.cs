@@ -12,12 +12,13 @@ namespace BSL.Implementation.Repository
             _appMetrics = appMetrics;
         }
 
-        public override IEnumerable<T> GetAll<T>()
+        public override async Task<IEnumerable<T>> GetAll<T>()
         {
-            MetricsContext.IsCacheHit.Value = false;
+            MetricsContext.Current.Value = new CacheMetricState { IsHit = false };
+
             var stopWatch = Stopwatch.StartNew();
 
-            var result = base.GetAll<T>();
+            var result = await base.GetAll<T>();
             stopWatch.Stop();
 
             _appMetrics.RecordMethodExecution(
@@ -28,11 +29,11 @@ namespace BSL.Implementation.Repository
             return result;
         }
 
-        public override void Add<T>(IEnumerable<T> editions)
+        public override async Task Add<T>(IEnumerable<T> editions)
         {
             var stopWatch = Stopwatch.StartNew();
 
-            base.Add(editions);
+            await base.Add(editions);
             stopWatch.Stop();
 
             _appMetrics.RecordMethodExecution(
@@ -41,11 +42,11 @@ namespace BSL.Implementation.Repository
                durationMs: stopWatch.Elapsed.TotalMilliseconds);
         }
 
-        public override void Remove<T>(IEnumerable<T> editions)
+        public override async Task Remove<T>(IEnumerable<T> editions)
         {
             var stopWatch = Stopwatch.StartNew();
 
-            base.Remove(editions);
+            await base.Remove(editions);
             stopWatch.Stop();
 
             _appMetrics.RecordMethodExecution(
@@ -54,19 +55,20 @@ namespace BSL.Implementation.Repository
                durationMs: stopWatch.Elapsed.TotalMilliseconds);
         }
 
-        public override T? GetByName<T>(string name) where T : class
+        public override async Task<T> GetByName<T>(string name) where T : class
         {
-            MetricsContext.IsCacheHit.Value = false;
+            MetricsContext.Current.Value = new CacheMetricState { IsHit = false };
+            
             var stopWatch = Stopwatch.StartNew();
 
-            var result = base.GetByName<T>(name);
+            var result = await base.GetByName<T>(name);
             stopWatch.Stop();
 
             _appMetrics.RecordMethodExecution(
                 methodName: "GetByName",
                 targetType: typeof(T).Name,
                 durationMs: stopWatch.Elapsed.TotalMilliseconds,
-                isCacheHit: MetricsContext.IsCacheHit.Value);
+                isCacheHit: MetricsContext.Current.Value.IsHit);
 
 
             return result;

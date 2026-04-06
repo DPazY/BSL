@@ -36,17 +36,17 @@ public class PatentServiceTest
     private Mock<IRepository> GetPatentRepositoryMoq<T>(List<T> res) where T : Patent
     {
         var repositoryMoq = new Mock<IRepository>();
-        repositoryMoq.Setup(repos => repos.GetAll<T>()).Returns(res);
+        repositoryMoq.Setup(repos => repos.GetAll<T>()).ReturnsAsync(res);
         return repositoryMoq;
     }
 
     [Test]
-    public void GetAll_ReturnPatentList()
+    public async Task GetAll_ReturnPatentList()
     {
         Mock<IRepository> repositoryMoq = GetPatentRepositoryMoq<Patent>(patents);
 
         IPatentService patentService = new PatentService(repositoryMoq.Object);
-        IEnumerable<Patent> result = patentService.GetAll();
+        IEnumerable<Patent> result = await patentService.GetAll();
         result.Should().BeEquivalentTo(patents);
 
     }
@@ -55,10 +55,10 @@ public class PatentServiceTest
     [Test]
     [TestCase(OrderBy.Asc)]
     [TestCase(OrderBy.Desc)]
-    public void GetAll_ReturnPatentListAscOrderByYear(OrderBy orderBy)
+    public async Task GetAll_ReturnPatentListAscOrderByYear(OrderBy orderBy)
     {
         IPatentService patentService = new PatentService(GetPatentRepositoryMoq<Patent>(patents).Object);
-        IEnumerable<Patent> result = patentService.GetAll(OrderBy.Asc);
+        IEnumerable<Patent> result = await patentService.GetAll(OrderBy.Asc);
         result.Should().BeEquivalentTo(orderBy == OrderBy.Asc
             ? patents.OrderBy(newspaper => newspaper.PublicationDate.Year)
             : patents.OrderByDescending(newspaper => newspaper.PublicationDate.Year));

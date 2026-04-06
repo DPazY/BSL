@@ -74,7 +74,7 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void Add_ShouldInsertBooksIntoDatabase()
+        public async Task Add_ShouldInsertBooksIntoDatabase()
         {
             var books = new List<Book>
             {
@@ -82,9 +82,9 @@ namespace BSL.Test.Repository
                 new Book("C# in Depth", new DateOnly(2019, 1, 1), "Manning", "Jon Skeet")
             };
 
-            _repository.Add(books);
+            await _repository.Add(books);
 
-            var result = _repository.GetAll<Book>().ToList();
+            var result = (await _repository.GetAll<Book>()).ToList();
 
             result.Should().HaveCount(2);
             result.Should().ContainSingle(b => b.Name == "CLR via C#");
@@ -97,29 +97,29 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void Add_DuplicateName_ShouldNotThrowExceptionDueToOnConflict()
+        public async Task Add_DuplicateName_ShouldNotThrowExceptionDueToOnConflict()
         {
             var book1 = new Book("Паттерны проектирования", new DateOnly(2000, 1, 1), "Питер", "Банда Четырех");
             var book2 = new Book("Паттерны проектирования", new DateOnly(2022, 1, 1), "Новое Издательство", "Новый Автор");
 
-            _repository.Add(new[] { book1 });
+            await _repository.Add(new[] { book1 });
 
-            Action act = () => _repository.Add(new[] { book2 });
+            Func<Task> act = async () => await _repository.Add(new[] { book2 });
 
-            act.Should().NotThrow("потому что в репозитории используется ON CONFLICT (Name) DO NOTHING");
+            await act.Should().NotThrowAsync("потому что в репозитории используется ON CONFLICT (Name) DO NOTHING");
 
-            var result = _repository.GetAll<Book>().ToList();
+            var result = (await _repository.GetAll<Book>()).ToList();
             result.Should().HaveCount(1, "дубликат не должен был добавиться");
             result.First().YearBook.Should().Be(2000, "должна остаться первоначальная версия книги");
         }
 
         [Test]
-        public void GetByName_WhenItemExists_ShouldReturnItem()
+        public async Task GetByName_WhenItemExists_ShouldReturnItem()
         {
             var book = new Book("Оптимизация .NET", new DateOnly(2023, 5, 5), "БХВ", "Саша Голдштейн");
-            _repository.Add(new[] { book });
+            await _repository.Add(new[] { book });
 
-            var result = _repository.GetByName<Book>("Оптимизация .NET");
+            var result = await _repository.GetByName<Book>("Оптимизация .NET");
 
             result.Should().NotBeNull();
             result!.Name.Should().Be("Оптимизация .NET");
@@ -127,31 +127,31 @@ namespace BSL.Test.Repository
         }
 
         [Test]
-        public void GetByName_WhenItemDoesNotExist_ShouldReturnNull()
+        public async Task GetByName_WhenItemDoesNotExist_ShouldReturnNull()
         {
-            var result = _repository.GetByName<Book>("Несуществующая книга");
+            var result = await _repository.GetByName<Book>("Несуществующая книга");
 
             result.Should().BeNull();
         }
 
         [Test]
-        public void Remove_ShouldDeleteSpecificItemsFromDatabase()
+        public async Task Remove_ShouldDeleteSpecificItemsFromDatabase()
         {
             var book1 = new Book("Книга на удаление", new DateOnly(2020, 1, 1), "Издат", "Автор 1");
             var book2 = new Book("Книга останется", new DateOnly(2021, 1, 1), "Издат", "Автор 2");
 
-            _repository.Add(new[] { book1, book2 });
+            await _repository.Add(new[] { book1, book2 });
 
-            _repository.Remove(new[] { book1 });
+            await _repository.Remove(new[] { book1 });
 
-            var result = _repository.GetAll<Book>().ToList();
+            var result = (await _repository.GetAll<Book>()).ToList();
             result.Should().HaveCount(1);
             result.Should().ContainSingle(b => b.Name == "Книга останется");
             result.Should().NotContain(b => b.Name == "Книга на удаление");
         }
 
         [Test]
-        public void AddAndGetAll_ShouldWorkForNewspapers()
+        public async Task AddAndGetAll_ShouldWorkForNewspapers()
         {
             var newspapers = new List<Newspaper>
             {
@@ -167,8 +167,8 @@ namespace BSL.Test.Repository
                 )
             };
 
-            _repository.Add(newspapers);
-            var result = _repository.GetAll<Newspaper>().ToList();
+           await _repository.Add(newspapers);
+            var result = (await _repository.GetAll<Newspaper>()).ToList();
 
             result.Should().HaveCount(1);
 

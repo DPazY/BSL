@@ -4,6 +4,6 @@ namespace BSL.Models.Interface
 {
     public interface IPatentService
     {
-        IEnumerable<Patent> GetAll(OrderBy? orderBy = null);  
+        Task<IEnumerable<Patent>> GetAll(OrderBy? orderBy = null);  
     }
 }
