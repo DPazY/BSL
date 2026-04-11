@@ -1,5 +1,4 @@
 ﻿using BSL.Implementation.Metrics;
-using BSL.Models;
 using BSL.Models.Interface;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -41,7 +40,7 @@ namespace BSL.Implementation.Repository
 
             if (_cache.TryGetValue(cacheKey, out var entry))
             {
-                Interlocked.Increment(ref entry.HitCount);
+                entry.RecordHit();
 
                 if (MetricsContext.Current.Value != null)
                 {
@@ -52,7 +51,7 @@ namespace BSL.Implementation.Repository
 
             var sw = Stopwatch.StartNew();
 
-            var dataFromFile =await base.GetByName<T>(name);
+            var dataFromFile = await base.GetByName<T>(name);
             sw.Stop();
 
             if (dataFromFile != null)
@@ -60,10 +59,11 @@ namespace BSL.Implementation.Repository
                 var newEntry = new CacheEntry
                 {
                     Data = dataFromFile,
-                    HitCount = 1, 
                     FetchDurationMs = sw.Elapsed.TotalMilliseconds,
                     SizeBytes = ObjectSizeApproximator.EstimateSizeBytes(dataFromFile)
                 };
+
+                newEntry.RecordHit();
 
                 EnsureMemoryCapacity(newEntry.SizeBytes);
 

@@ -15,7 +15,7 @@ namespace BSL.App.Service
         private readonly AppSettings _options;
         private readonly ILogger<IfsBackgroundPrefetcher> _logger;
 
-        // Интервал дискретизации для математической модели (t = 2 сек)
+        // Интервал дискретизации для математической модели (t = 20 милисекунд)
         private static readonly TimeSpan SamplingInterval = TimeSpan.FromMilliseconds(20);
 
         public IfsBackgroundPrefetcher(
@@ -85,13 +85,13 @@ namespace BSL.App.Service
                             switch (entityType)
                             {
                                 case "Book":
-                                    repository.GetByName<Book>(entityName);
+                                    await repository.GetByName<Book>(entityName);
                                     break;
                                 case "Patent":
-                                    repository.GetByName<Patent>(entityName);
+                                    await repository.GetByName<Patent>(entityName);
                                     break;
                                 case "Newspaper":
-                                    repository.GetByName<Newspaper>(entityName);
+                                    await repository.GetByName<Newspaper>(entityName);
                                     break;
                                 default:
                                     _logger.LogWarning("Неизвестный тип сущности для префетчинга: {EntityType}", entityType);
