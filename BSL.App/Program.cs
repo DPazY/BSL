@@ -16,6 +16,10 @@ internal class Program
 {
     async private static Task Main(string[] args)
     {
+        bool isWebMode = args.Contains("--web");
+
+        var appArgs = args.Where(a => a != "--web").ToArray();
+
         var configurationBuilder = new ConfigurationBuilder();
 
         configurationBuilder
@@ -40,29 +44,29 @@ internal class Program
 
         var host = Host.CreateDefaultBuilder();
 
-        host.ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.Configure(app =>
-            {
-                app.UseRouting();
-                app.UseEndpoints(endpoints =>
-                {
-                    endpoints.MapGet("/api/test/books/{name}", async (string name, IRepository repository) =>
-                    {
-                        return await repository.GetByName<Book>(name);
-                    });
-                });
-            });
-        });
-
-        if (args.Length > 0)
-            host.UseCommandLineApplication<App>(args);
+        if (appArgs.Length > 0)
+            host.UseCommandLineApplication<App>(appArgs);
 
         var hostBuilded = host
             .ConfigureServices(serviceCollection =>
             {
                 serviceCollection.AddSingleton<IBookService, BookService>();
-                serviceCollection.AddSingleton<IXmlService, BookXmlService>();
+                if (isWebMode)
+                {
+                    serviceCollection.AddHttpClient("BslWebClient", client =>
+                    {
+                        client.BaseAddress = new Uri("http://localhost:5155");
+                        client.DefaultRequestHeaders.Add("X-API-Key", "b3c29924-814d-4876-80db-f9540b6e92b5");
+                    });
+
+                    serviceCollection.AddSingleton<IXmlService, WebXmlService>();
+                    Console.WriteLine("[System] Запуск в WEB режиме...");
+                }
+                else
+                {
+                    serviceCollection.AddSingleton<IXmlService, BookXmlService>();
+                    Console.WriteLine("[System] Запуск в ЛОКАЛЬНОМ режиме...");
+                }
                 serviceCollection.AddSingleton(new AppSettings(workdir, fileWatcher, processedFile));
                 serviceCollection.AddSingleton<ISerializerStrategy, XmlSerializerStrategy>();
                 serviceCollection.AddSingleton<IFileSystem>(provider =>
@@ -104,7 +108,7 @@ internal class Program
                 });
 
 
-                if (args.Length == 0)
+                if (appArgs.Length == 0)
                 {
                     serviceCollection.AddHostedService<IfsBackgroundPrefetcher>();
                     serviceCollection.AddHostedService<FileWatcher>();
@@ -124,10 +128,9 @@ internal class Program
             })
             .Build();
 
-        if (args.Length > 0)
+        if (appArgs.Length > 0)
         {
             await hostBuilded.RunCommandLineApplicationAsync();
-            await hostBuilded.RunAsync();
         }
         else
         {

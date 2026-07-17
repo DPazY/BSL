@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BSL.App.Service
 {
-    internal class FileWatcher(
+    public class FileWatcher(
         FileProcessingQueue queue,
         ILogger<FileWatcher> logger,
         AppSettings appSettings)

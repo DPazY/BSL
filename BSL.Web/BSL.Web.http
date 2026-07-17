@@ -1,0 +1,6 @@
+@BSL.Web_HostAddress = http://localhost:5155
+
+GET {{BSL.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

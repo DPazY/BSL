@@ -25,7 +25,7 @@ export const options = {
 };
 
 export default function () {
-    const baseUrl = 'http://localhost:14450/api/test/books/';
+    const baseUrl = 'http://localhost:5155/books/';
     const vuId = exec.vu.idInTest;
     const timeSinceStart = Date.now() - exec.scenario.startTime;
 

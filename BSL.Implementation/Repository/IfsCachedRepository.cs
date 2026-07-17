@@ -1,4 +1,5 @@
 ﻿using BSL.Implementation.Metrics;
+using BSL.Models;
 using BSL.Models.Interface;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -36,11 +37,18 @@ namespace BSL.Implementation.Repository
         {
             string cacheKey = $"{typeof(T).Name}:{name}";
 
-            _telemetryAggregator.RecordHit(cacheKey);
+            if (!PrefetchContext.IsPrefetching)
+            {
+                _telemetryAggregator.RecordHit(cacheKey);
+            }
 
             if (_cache.TryGetValue(cacheKey, out var entry))
             {
-                entry.RecordHit();
+                // Обновляем статистику кэша тоже только для юзеров
+                if (!PrefetchContext.IsPrefetching)
+                {
+                    entry.RecordHit();
+                }
 
                 if (MetricsContext.Current.Value != null)
                 {

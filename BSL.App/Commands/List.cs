@@ -25,7 +25,7 @@ namespace BSL.App.Commands
         [Option("-t|--name", Description = "Search books by name")]
         public string Name { get; set; }
 
-        public async Task OnExecute()
+        public async Task OnExecuteAsync()
         {
             using (Stream stream = new FileStream(OutFile, FileMode.Create))
             {

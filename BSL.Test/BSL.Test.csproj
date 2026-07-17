@@ -15,8 +15,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.8.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.11" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.10" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
@@ -26,6 +27,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NUnit3TestAdapter" Version="6.1.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.0" />
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" Version="22.1.0" />
     <PackageReference Include="TestableIO.System.IO.Abstractions" Version="22.1.0" />
   </ItemGroup>
@@ -33,6 +35,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BSL.Implementation\BSL.Implementation.csproj" />
     <ProjectReference Include="..\BSL.Models\BSL.Models.csproj" />
+    <ProjectReference Include="..\BSL.Security\BSL.Security.csproj" />
   </ItemGroup>
 
   <ItemGroup>

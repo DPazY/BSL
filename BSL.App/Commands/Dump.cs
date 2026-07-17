@@ -13,15 +13,15 @@ namespace BSL.App.Commands
     {
         [Argument(0, "outFile", Description = "File path to save the dump")]
         [Required(ErrorMessage = "Argument {0} is required")]
-        public string OutFile { get; set; }
+        public required string OutFile { get; set; }
 
-        public void OnExecute()
+        public async Task OnExecuteAsync()
         {
             logger.LogDebug($"Starting dump in {OutFile}");
 
             using (Stream stream = new FileStream(OutFile, FileMode.Create))
             {
-                xmlService.Export(stream);
+                await xmlService.Export(stream);
             }
 
             logger.LogDebug("Dump is done");

@@ -53,7 +53,7 @@ namespace BSL.Implementation.Service
             {
                 booksForRepository.AddRange(newBooksForRepository);
 
-                _bookXmlRepository.Add(booksForRepository);
+                await _bookXmlRepository.Add(booksForRepository);
             }
         }
         public async Task<Stream> Export(Stream stream, IEnumerable<Book>? filteredBooks = null)
@@ -65,7 +65,7 @@ namespace BSL.Implementation.Service
             CatalogXmlDto catalog = new CatalogXmlDto();
             if (stream.Length != 0)
             {
-                catalog = (CatalogXmlDto?)serializer.Deserialize(stream);
+                catalog =(CatalogXmlDto?)serializer.Deserialize(stream);
             }
 
             ArgumentNullException.ThrowIfNull(catalog, nameof(catalog));

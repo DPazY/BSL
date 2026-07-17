@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.72" />
     <PackageReference Include="Google.Protobuf" Version="3.33.5" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.0" />
     <PackageReference Include="protobuf-net" Version="3.2.56" />
     <PackageReference Include="System.IO.Abstractions" Version="22.1.0" />
   </ItemGroup>

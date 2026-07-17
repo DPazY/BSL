@@ -17,7 +17,7 @@ namespace BSL.Implementation
         private readonly CancellationTokenSource _cts = new();
         private readonly Task _processingTask;
 
-        private const int IfsWindowSize = 10;
+        private const int IfsWindowSize = 1100;
 
         public TelemetryAggregator()
         {
@@ -39,7 +39,6 @@ namespace BSL.Implementation
         /// </summary>
         public void RecordHit(string key)
         {
-            // TryWrite моментально возвращает управление. Поток чтения не ждет агрегации.
             _hitChannel.Writer.TryWrite(key);
         }
 

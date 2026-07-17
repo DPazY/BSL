@@ -15,8 +15,8 @@ namespace BSL.App.Service
         private readonly AppSettings _options;
         private readonly ILogger<IfsBackgroundPrefetcher> _logger;
 
-        // Интервал дискретизации для математической модели (t = 20 милисекунд)
-        private static readonly TimeSpan SamplingInterval = TimeSpan.FromMilliseconds(20);
+        // Интервал дискретизации для математической модели (t = 1 секунда)
+        private static readonly TimeSpan SamplingInterval = TimeSpan.FromMilliseconds(200);
 
         public IfsBackgroundPrefetcher(
             ITelemetryAggregator telemetryAggregator,
@@ -82,20 +82,29 @@ namespace BSL.App.Service
                             string entityType = parts[0];
                             string entityName = parts[1];
 
-                            switch (entityType)
+                            PrefetchContext.IsPrefetching = true;
+
+                            try
                             {
-                                case "Book":
-                                    await repository.GetByName<Book>(entityName);
-                                    break;
-                                case "Patent":
-                                    await repository.GetByName<Patent>(entityName);
-                                    break;
-                                case "Newspaper":
-                                    await repository.GetByName<Newspaper>(entityName);
-                                    break;
-                                default:
-                                    _logger.LogWarning("Неизвестный тип сущности для префетчинга: {EntityType}", entityType);
-                                    break;
+                                switch (entityType)
+                                {
+                                    case "Book":
+                                        await repository.GetByName<Book>(entityName);
+                                        break;
+                                    case "Patent":
+                                        await repository.GetByName<Patent>(entityName);
+                                        break;
+                                    case "Newspaper":
+                                        await repository.GetByName<Newspaper>(entityName);
+                                        break;
+                                    default:
+                                        _logger.LogWarning("Неизвестный тип сущности: {EntityType}", entityType);
+                                        break;
+                                }
+                            }
+                            finally
+                            {
+                                PrefetchContext.IsPrefetching = false;
                             }
                         }
                     }

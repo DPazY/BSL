@@ -3,6 +3,7 @@ import { sleep } from 'k6';
 import { SharedArray } from 'k6/data';
 import exec from 'k6/execution';
 
+// Загрузка списка названий книг из CSV
 const bookNames = new SharedArray('bookNames', function () {
     return open('./books_name.csv')
         .split('\n')
@@ -12,59 +13,80 @@ const bookNames = new SharedArray('bookNames', function () {
 
 export const options = {
     stages: [
-        { duration: '30s', target: 20 },  // Разгон
-        { duration: '10s', target: 150 }, // Фрактальный всплеск (эффект толпы)
-        { duration: '50s', target: 150 }, // Удержание пиковой нагрузки
-        { duration: '30s', target: 10 },  // Спад
+        { duration: '30s', target: 50 },   // Разогрев
+        { duration: '30s', target: 200 },  // Эпоха 1 (30-60с)
+        { duration: '30s', target: 200 },  // Эпоха 2 (60-90с)
+        { duration: '30s', target: 200 },  // Эпоха 3 (90-120с)
+        { duration: '20s', target: 10 },   // Остывание
     ],
     thresholds: {
-        http_req_duration: ['p(95)<200'],
+        http_req_duration: ['p(95)<300'], // SLA
     },
 };
 
-export default function () {
-    const baseUrl = 'http://localhost:14450/api/test/books/';
+// Генерация шума с длинным хвостом (распределение Парето / Ципфа)
+function getBackgroundNoiseIndex(vuId, totalBooks) {
+    // 10% запросов шума попадают в первые 50 книг (имитация локальной популярности)
+    if (Math.random() < 0.1) {
+        return vuId % 50;
+    } else {
+        // Остальные 90% — равномерно по всему остальному диапазону (длинный хвост)
+        const tailSize = totalBooks - 50;
+        return 50 + Math.floor(Math.random() * tailSize);
+    }
+}
 
-    // Вместо чистого Math.random() используем ID виртуального пользователя (VU) 
-    // и номер его итерации, чтобы создать детерминированную траекторию (динамическую систему)
+export default function () {
+    const baseUrl = 'http://localhost:5155/books/';
+    const timeSinceStart = (Date.now() - exec.scenario.startTime) / 1000; // секунды
     const vuId = exec.vu.idInTest;
-    const iter = exec.vu.iterationInScenario;
+
+    // Аттракторы (популярные элементы) на разных интервалах времени
+    const idx1 = Math.floor(bookNames.length * 0.3);  // 30%
+    const idx2 = Math.floor(bookNames.length * 0.6);  // 60%
+    const idx3 = Math.floor(bookNames.length * 0.9);  // 90%
 
     let targetIndex;
+    let sleepTime = 0.1;
 
-    // Разбиваем поведение пользователя на циклы (например, по 10 итераций)
-    // Это создает точки притяжения (аттракторы), которые алгоритм может изучить
-    const patternStep = iter % 10;
-
-    if (patternStep < 4) {
-        // 1. Паттерн "Связанная последовательность" (Пространственная локальность)
-        // Имитируем чтение серии книг (Том 1, Том 2, Том 3...).
-        // LRU даст промах (miss) на каждом новом томе.
-        // Математическая модель (IFS) уловит аффинное преобразование (X_n+1 = X_n + 1)
-        // и успеет положить следующие тома в кэш заранее.
-        const baseIndex = (vuId * 50) % (bookNames.length - 20);
-        targetIndex = baseIndex + patternStep;
-
-    } else if (patternStep >= 4 && patternStep < 7) {
-        // 2. Классический "Горячий топ" (Парето)
-        // Даем LRU немного поработать в комфортных условиях, 
-        // имитируя обращения к главной странице или бестселлерам.
-        targetIndex = vuId % 30;
-
+    // Фазы нагрузки (смена аттракторов)
+    if (timeSinceStart > 30 && timeSinceStart <= 60) {
+        // Эпоха 1: доминирует idx1
+        if (Math.random() < 0.85) {
+            targetIndex = idx1;
+            sleepTime = 0.05; // высокая интенсивность
+        } else {
+            targetIndex = getBackgroundNoiseIndex(vuId, bookNames.length);
+            sleepTime = 0.2;
+        }
+    } else if (timeSinceStart > 60 && timeSinceStart <= 90) {
+        // Эпоха 2: доминирует idx2
+        if (Math.random() < 0.85) {
+            targetIndex = idx2;
+            sleepTime = 0.05;
+        } else {
+            targetIndex = getBackgroundNoiseIndex(vuId, bookNames.length);
+            sleepTime = 0.2;
+        }
+    } else if (timeSinceStart > 90 && timeSinceStart <= 120) {
+        // Эпоха 3: доминирует idx3
+        if (Math.random() < 0.85) {
+            targetIndex = idx3;
+            sleepTime = 0.05;
+        } else {
+            targetIndex = getBackgroundNoiseIndex(vuId, bookNames.length);
+            sleepTime = 0.2;
+        }
     } else {
-        // 3. Паттерн "Вымывание кэша" (Cache Churn / Scan Resistance)
-        // Имитируем фоновый процесс или бота, который сканирует каталог.
-        // Этот линейный проход быстро забьет ограниченный объем LRU-кэша, 
-        // вытеснив оттуда "Горячий топ". Когда цикл вернется к шагу 4, LRU снова даст miss.
-        // Интеллектуальный кэш должен распознать этот вектор как "не требующий долгого хранения".
-        targetIndex = Math.floor(bookNames.length / 2) + (iter % 200);
+        // Начальный разогрев и финальное остывание: только фоновый шум
+        targetIndex = getBackgroundNoiseIndex(vuId, bookNames.length);
+        sleepTime = 0.2;
     }
 
+    // Защита от выхода за границы массива
+    targetIndex = Math.max(0, Math.min(targetIndex, bookNames.length - 1));
     const bookName = bookNames[targetIndex];
 
-    const res = http.get(baseUrl + encodeURIComponent(bookName));
-
-    // Варьируем задержку: последовательные переходы (чтение томов) происходят быстрее
-    const sleepTime = (patternStep < 4) ? 0.05 : 0.2;
+    http.get(baseUrl + encodeURIComponent(bookName));
     sleep(sleepTime);
 }

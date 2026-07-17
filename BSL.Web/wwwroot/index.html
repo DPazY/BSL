@@ -1,0 +1,130 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Управление книгами</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        input, button {
+            padding: 8px;
+            margin-right: 10px;
+        }
+
+        #output {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Менеджер библиотеки</h1>
+
+    <div class="card">
+        <h3>1. Импорт книг (XML)</h3>
+        <input type="file" id="fileInput" accept=".xml">
+        <button onclick="uploadFile()">Загрузить на сервер</button>
+    </div>
+
+    <div class="card">
+        <h3>2. Экспорт базы</h3>
+        <button onclick="downloadDump()">Скачать полный дамп (XML)</button>
+    </div>
+
+    <div class="card">
+        <h3>3. Поиск по названию</h3>
+        <input type="text" id="searchInput" placeholder="Введите название...">
+        <button onclick="searchBook()">Найти</button>
+    </div>
+
+    <h3>Ответ сервера:</h3>
+    <pre id="output">Здесь будут результаты...</pre>
+
+    <script>
+        function showResult(text) {
+            document.getElementById('output').innerText = text;
+        }
+
+        // --- POST /books/import ---
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) {
+                showResult("Пожалуйста, выберите файл!");
+                return;
+            }
+
+            // Создаем виртуальную "форму" для отправки файла
+            const formData = new FormData();
+            // Имя "formFile" ДОЛЖНО совпадать с параметром в app.MapPost!
+            formData.append("formFile", fileInput.files[0]);
+
+            showResult("Загрузка...");
+
+            try {
+                const response = await fetch('/books/import', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Читаем текст ответа от сервера ("Файл успешно загружен!")
+                const text = await response.text();
+                showResult(`Статус: ${response.status}\nОтвет: ${text}`);
+            } catch (error) {
+                showResult("Ошибка сети: " + error);
+            }
+        }
+
+        // --- GET /dumps/full ---
+        function downloadDump() {
+            // Для GET-запросов, возвращающих файл, проще всего просто перенаправить браузер.
+            // Браузер сам поймет, что это файл (благодаря Results.Stream), и начнет скачивание.
+            window.location.href = '/dumps/full';
+            showResult("Началось скачивание файла...");
+        }
+
+        // --- GET /books/{name} ---
+        async function searchBook() {
+            const name = document.getElementById('searchInput').value;
+            if (!name) {
+                showResult("Введите название книги");
+                return;
+            }
+
+            showResult("Поиск...");
+
+            try {
+                // Кодируем имя на случай пробелов или русских букв в URL
+                const response = await fetch('/books/' + encodeURIComponent(name));
+
+                if (response.status === 404) {
+                    const text = await response.text();
+                    showResult(`Ошибка 404: ${text}`);
+                    return;
+                }
+
+                // Если всё ОК, сервер вернет JSON
+                const bookData = await response.json();
+                // Красиво форматируем JSON для вывода
+                showResult(JSON.stringify(bookData, null, 2));
+            } catch (error) {
+                showResult("Ошибка сети: " + error);
+            }
+        }
+    </script>
+</body>
+</html>
