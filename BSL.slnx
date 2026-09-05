@@ -1,8 +1,8 @@
 <Solution>
-  <Project Path="BSL.App/BSL.App.csproj" Id="90a4150f-9a1c-49a4-93a2-7f2f7c6d3436" />
-  <Project Path="BSL.Implementation/BSL.Implementation.csproj" Id="f8e640e1-4dee-48e5-b698-a4845eb80ca4" />
-  <Project Path="BSL.Models/BSL.Models.csproj" Id="483e08f9-7d0c-4302-ad3e-ae9f99e53620" />
-  <Project Path="BSL.Security/BSL.Security.csproj" Id="c17c453d-6a38-4c74-a15c-0b9e6b08bf8a" />
+  <Project Path="BSL.App/BSL.App.csproj" />
+  <Project Path="BSL.Implementation/BSL.Implementation.csproj" />
+  <Project Path="BSL.Models/BSL.Models.csproj" />
+  <Project Path="BSL.Security/BSL.Security.csproj" />
   <Project Path="BSL.Test/BSL.Test.csproj" />
-  <Project Path="BSL.Web/BSL.Web.csproj" Id="168041e4-a777-45d6-b5ad-0573253c3d73" />
+  <Project Path="BSL.Web/BSL.Web.csproj" />
 </Solution>

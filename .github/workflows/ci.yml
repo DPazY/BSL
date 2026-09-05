@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "chore/ci-and-readme" ]
   pull_request:
     branches: [ "main", "master" ]
 
@@ -20,10 +20,10 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore BSL.sln
+        run: dotnet restore BSL.slnx
 
       - name: Build solution
-        run: dotnet build BSL.sln -c Release --no-restore
+        run: dotnet build BSL.slnx -c Release --no-restore
 
       - name: Run unit tests
         run: dotnet test BSL.Test/BSL.Test.csproj -c Release --no-build --verbosity normal
