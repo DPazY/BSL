@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Элементы решения/">
+    <File Path="init.sql" />
+  </Folder>
   <Project Path="BSL.App/BSL.App.csproj" />
   <Project Path="BSL.Implementation/BSL.Implementation.csproj" />
   <Project Path="BSL.Models/BSL.Models.csproj" />
