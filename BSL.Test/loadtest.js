@@ -37,8 +37,10 @@ function getBackgroundNoiseIndex(vuId, totalBooks) {
 }
 
 export default function () {
-    const baseUrl = 'http://localhost:5155/books/';
-    const timeSinceStart = (Date.now() - exec.scenario.startTime) / 1000; // секунды
+    const host = __ENV.TARGET_URL || 'http://bsl-web:8080';
+    const baseUrl = `${host}/books/`;
+
+    const timeSinceStart = (Date.now() - exec.scenario.startTime) / 1000;
     const vuId = exec.vu.idInTest;
 
     // Аттракторы (популярные элементы) на разных интервалах времени

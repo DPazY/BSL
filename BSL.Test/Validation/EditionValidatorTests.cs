@@ -3,7 +3,7 @@ using BSL.Models;
 using FluentValidation.TestHelper;
 using System.Diagnostics.CodeAnalysis;
 
-namespace BSL.Test.Validators
+namespace BSL.Test.Validation
 {
     [TestFixture]
     public class EditionValidatorTests
