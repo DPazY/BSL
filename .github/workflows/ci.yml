@@ -43,5 +43,8 @@ jobs:
 
       - name: Run tests
         env:
+          TestConnectionString: Host=localhost;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
           ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
-        run: dotnet test BSL.slnx -c Release --no-build --verbosity normal
+        run: |
+          dotnet user-secrets set "TestConnectionString" "Host=localhost;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password" --project BSL.Test/BSL.Test.csproj
+          dotnet test BSL.slnx -c Release --no-build --verbosity normal
