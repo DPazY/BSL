@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -8,7 +8,23 @@ on:
 
 jobs:
   build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: bsl_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout repository
@@ -25,5 +41,7 @@ jobs:
       - name: Build solution
         run: dotnet build BSL.slnx -c Release --no-restore
 
-      - name: Run unit tests
-        run: dotnet test BSL.Test/BSL.Test.csproj -c Release --no-build --verbosity normal
+      - name: Run tests
+        env:
+          ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
+        run: dotnet test BSL.slnx -c Release --no-build --verbosity normal
