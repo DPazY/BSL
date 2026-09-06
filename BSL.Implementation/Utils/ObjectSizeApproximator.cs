@@ -1,6 +1,6 @@
 ﻿using BSL.Models;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Utils
 {
     public class ObjectSizeApproximator
     {

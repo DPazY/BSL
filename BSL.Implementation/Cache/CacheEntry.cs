@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Cache
 {
     public class CacheEntry
     {

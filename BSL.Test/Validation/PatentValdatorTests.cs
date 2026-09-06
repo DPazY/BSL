@@ -2,7 +2,7 @@
 using BSL.Models;
 using FluentValidation.TestHelper;
 
-namespace BSL.Test.Validators
+namespace BSL.Test.Validation
 {
     [TestFixture]
     public class PatentValidatorTests

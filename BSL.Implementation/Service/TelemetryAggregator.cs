@@ -3,7 +3,7 @@ using BSL.Models.Interface;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 
-namespace BSL.Implementation
+namespace BSL.Implementation.Service
 {
     /// <summary>
     /// Агрегатор телеметрии для сбора исторических данных (интенсивности запросов \lambda).

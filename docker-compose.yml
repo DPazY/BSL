@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bsl-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bsl_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bsl_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  bsl.web:
+    image: ${DOCKER_REGISTRY-}bslweb
+    container_name: bsl-web
+    build:
+      context: .
+      dockerfile: BSL.Web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
+      - AppSettings__ConnectionString=Host=postgres;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
+
+volumes:
+  postgres_data:

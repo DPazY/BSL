@@ -1,113 +1,129 @@
-# BSL (Book & Serials Library) — Highload Caching Optimization PoC
+# BSL (Book & Serials Library) — Highload Caching Optimization Engine
 
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet)
-![C#](https://img.shields.io/badge/C%23-12.0-239120?style=flat-square&logo=c-sharp)
+[![CI/CD Pipeline](https://github.com/DPazY/BSL/actions/workflows/ci.yml/badge.svg)](https://github.com/DPazY/BSL/actions/workflows/ci.yml)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)
+![C#](https://img.shields.io/badge/C%23-13.0-239120?style=flat-square&logo=c-sharp)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)
 ![k6](https://img.shields.io/badge/k6-Load_Testing-7D64FF?style=flat-square&logo=k6&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)
 
 ## About
-**BSL** is a domain-driven service suite designed for managing publications (Books, Newspapers, Patents). 
+**BSL** is a high-performance, domain-driven backend service designed for processing publications (Books, Newspapers, Patents).
 
-**Primary Purpose:** Beyond its business logic, this project serves as a practical implementation for the academic thesis: *"Optimization of the performance of high-load systems using mathematical models of resource management (on the example of the caching problem in .NET)"*. 
+**Primary Purpose:** Beyond basic catalog operations, this project serves as an engineering and research implementation for the academic thesis: *"Optimization of the performance of high-load systems using mathematical models of resource management (on the example of the caching problem in .NET)"*.
 
-It demonstrates a novel approach to resolving caching bottlenecks in Highload systems by applying advanced mathematical models to predict traffic bursts and mathematically justify cache eviction strategies.
+It resolves the **Thundering Herd** problem and database pool exhaustion under non-stationary, self-similar network traffic (Heavy-Tailed distributions) by shifting cache management from classical heuristics (LRU/LFU) to a predictive mathematical model.
+
+---
+
+## Benchmark Results (k6 Load Testing)
+
+Comparison between classical **Reactive LRU** and the developed **Proactive Caching Engine (BSL)** under synthetic self-similar traffic and constrained memory ($W = 100$ items):
+
+| Metric | Reactive LRU | Proactive Caching (BSL) | Impact |
+| :--- | :---: | :---: | :---: |
+| **Peak Hit Ratio** | 3–5% *(cache thrashing)* | **73–78%** | **~14x improvement** |
+| **Latency p95 (Hits)** | ~11,800 ms *(DB queue congestion)* | **< 40 ms** | **~295x lower latency** |
+| **Latency p95 (Misses)** | 10,000+ ms *(timeouts)* | **500–1,000 ms** | **10–12x reduction** |
+| **Throughput (RPS Hits)** | 13.3 req/s | **16.3 req/s** | **+22.5%** |
+
+---
 
 ## Research & Mathematical Model
-The core innovation of this project is the **Hybrid Cost-Aware Caching Algorithm**, which fundamentally shifts cache management from standard heuristic approaches (like LRU/LFU) to a mathematically rigorous predictive model.
+
+The core innovation of the project is the **Hybrid Cost-Aware Predictive Caching Algorithm**.
 
 ### 1. IFS-Predictor (Proactive Prefetching)
-To anticipate high-load spikes before they occur, the system employs **Iterated Function Systems (IFS)** and fractal analysis. 
-* **Mechanism:** By analyzing the self-similar nature of network traffic and database access patterns, the IFS-Predictor identifies emerging load bursts.
-* **Outcome:** The system proactively fetches the required publication data from PostgreSQL into the cache *before* the actual user request hits the server, drastically reducing latency during peak loads.
+To anticipate high-load spikes before they occur, the system employs an approach inspired by **Iterated Function Systems (IFS)** and local affine transformations:
+* **Mechanism:** By scanning recent access intensity history ($k = 20$), the predictor searches for the closest geometric analog in historical data using 1D affine mapping $W(d) = s \cdot d + o$ minimized via Mean Squared Error (MSE).
+* **Burst Adaptation:** The contractivity condition $|s| < 1$ is relaxed to $|s| \le 1.5$ to allow trend extrapolation during emerging traffic surges.
+* **Outcome:** Background worker (`PeriodicTimer`) proactively fetches publications from PostgreSQL into memory *before* customer queries arrive, eliminating cold misses.
 
-### 2. KKT-Eviction (Reactive Eviction)
-When memory limits are reached, standard eviction algorithms often discard data that is computationally expensive to retrieve. BSL solves this using the **Continuous Knapsack Problem (Fractional Knapsack)** combined with **Karush-Kuhn-Tucker (KKT) conditions**.
-* **Mechanism:** Every cached object is assigned a *Specific Utility Index*. This index is dynamically calculated based on:
-  * Access frequency.
-  * Object size in memory.
-  * **Miss Penalty:** The computational and I/O cost required to fetch the object from the database if it is evicted.
-* **Outcome:** The cache mathematically guarantees the eviction of the "cheapest" data (in terms of DB retrieval cost), optimizing the overall system throughput.
+### 2. Fractional Knapsack & Eviction Policy
+When memory capacity is exceeded, traditional algorithms drop data based only on recency. BSL models eviction as a **Continuous Knapsack Problem**:
+* **Mechanism:** Every cached object is assigned a dynamic utility index:
+  $$\rho_i = \frac{\lambda_i \cdot t_i}{w_i}$$
+  where $\lambda_i$ is access frequency, $t_i$ is DB extraction cost (penalty), and $w_i$ is physical memory footprint.
+* **Lazy Re-evaluation:** To avoid $O(N)$ priority queue re-sorting overhead, candidates from the `PriorityQueue` (Min-Heap) are evaluated lazily on eviction. If an item's priority increased due to a newly predicted burst, eviction is canceled (`MaxSpins = 50` livelock protection), ensuring $O(\log N)$ eviction complexity.
 
-## Key Features
-* **Advanced Telemetry & Metrics:** Continuous collection of method execution durations (e.g., `bsl.repository.method.duration`) feeds directly into the mathematical model to adjust the "Miss Penalty" in real-time.
-* **Background Processing:** Implementation of robust background workers (`FileWatcher`, `FileProcessingQueue`) for asynchronous file handling without blocking the main execution thread.
-* **SOLID Architecture:** Strict adherence to SOLID principles ensures that the complex mathematical logic is decoupled from the business domain.
+---
 
-## Architecture & Patterns
-The project heavily leverages GoF design patterns to seamlessly integrate the complex caching algorithms into the standard data flow:
+## Concurrency & High-Performance Architecture
 
-* **Decorator Pattern:** The `RepositoryDecorator` wraps the standard `PostgresRepository` and `FileRepository`. This allows for transparent injection of the KKT-Eviction cache and telemetry tracking without modifying the underlying data access logic.
-* **Strategy Pattern:** Used for dynamic serialization contexts (`JsonSerializerStrategy`, `XmlSerializerStrategy`, `ProtobufSerializerStrategy`), allowing the system to switch serialization formats on the fly based on payload size and performance requirements.
-* **Repository Pattern:** Abstracts the underlying data storage, enabling easy swapping between SQL databases, file systems, and in-memory test mocks.
+* **Lock-Free Hit Tracking:** Telemetry updates and exponential decay calculations are completely thread-safe and lock-free, implemented via CAS loops (`Interlocked.CompareExchange`) over `ConcurrentDictionary`.
+* **Zero-Allocation Ready:** Critical mathematical paths minimize heap allocations to prevent Gen0 GC pauses under high concurrency.
+* **Decorator Pipeline:** Architecture follows the Decorator pattern over Dapper repositories, keeping business logic clean and decoupled from caching mechanics.
 
-```csharp
-// Example: Transparent caching and metrics via Decorator
-public class CachedRepositoryDecorator<T> : IRepository<T> 
-{
-    private readonly IRepository<T> _innerRepository;
-    private readonly IMetricsContext _metrics;
-    private readonly IKktCache _cache;
+mermaid
+flowchart TD
+Client[HTTP Client / k6 Traffic Generator] --> App[ASP.NET Core Minimal API]
 
-    public CachedRepositoryDecorator(IRepository<T> inner, IMetricsContext metrics, IKktCache cache)
-    {
-        _innerRepository = inner;
-        _metrics = metrics;
-        _cache = cache;
-    }
+    subgraph Data Access Layer (Decorator Chain)
+        App --> MetricDec[MetricsDecorator (Telemetry Tracking)]
+        MetricDec --> CacheRepo[PACachedRepository (Lock-Free In-Memory)]
+        CacheRepo -->|Cache Hit| MemoryCache[(ConcurrentDictionary)]
+        CacheRepo -->|Cache Miss| PgRepo[PostgresRepository (Dapper)]
+    end
+    
+    subgraph Background Services
+        Prefetcher[IfsBackgroundPrefetcher] -.->|Predictive Prefetch| PgRepo
+        Prefetcher -.->|Pre-warm Cache| MemoryCache
+    end
+    
+    PgRepo --> Database[(PostgreSQL Database)]
 
-    public async Task<T> GetByIdAsync(Guid id)
-    {
-        if (_cache.TryGet(id, out var cachedItem)) 
-            return cachedItem;
-        
-        var timer = System.Diagnostics.Stopwatch.StartNew();
-        var item = await _innerRepository.GetByIdAsync(id);
-        timer.Stop();
-        
-        _metrics.Record("bsl.repository.method.duration", timer.ElapsedMilliseconds);
-        
-        // The duration is used to calculate the 'Miss Penalty' for the KKT algorithm
-        _cache.Set(id, item, timer.ElapsedMilliseconds); 
-        
-        return item;
-    }
-}
-```
+---
+
+## Architecture & Design Patterns
+
+* **Decorator Pattern:** `RepositoryDecorator` wraps the persistence repositories (`PostgresRepository`, `FileRepository`), enabling transparent cache injection and execution time telemetry (`bsl.repository.method.duration`) without touching domain logic.
+* **Strategy Pattern:** Interchangeable serialization engines (`JsonSerializerStrategy`, `XmlSerializerStrategy`, `ProtobufSerializerStrategy`) switchable depending on payload constraints.
+* **Repository Pattern:** Complete abstraction over persistence layers for seamless swapping between PostgreSQL, file storage, and mock test providers.
+
+---
 
 ## Tech Stack
-* **Language/Framework:** C#, .NET 8
-* **Database:** PostgreSQL
-* **Architecture:** Domain-Driven Design (DDD) concepts, Dependency Injection
-* **Testing:** xUnit, Moq
-* **Load Testing:** k6 (JavaScript)
+* **Language & Runtime:** C# 13, .NET 10
+* **Database & Access:** PostgreSQL, Dapper (Micro-ORM)
+* **Testing & Quality:** xUnit, Moq, GitHub Actions CI
+* **Observability:** OpenTelemetry, AppMetrics
+* **Load Simulation:** k6 (JavaScript)
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-* .NET SDK 8.0+
-* PostgreSQL server running locally or via Docker.
+* .NET SDK 10.0+
+* Docker & Docker Compose (or local PostgreSQL)
 
-### Installation
+### Installation & Run
+
 1. Clone the repository:
-```bash
-git clone [https://github.com/yourusername/bsl.git](https://github.com/yourusername/bsl.git)
-```
-2. Configure the database connection string in `BSL.App/AppConfig.json`.
-3. Apply database migrations (if applicable) or run the setup script.
-4. Run the application:
-```bash
-dotnet build
+bash
+git clone https://github.com/DPazY/BSL.git
+cd BSL
+
+
+2. Start database and service via Docker Compose:
+bash
+docker compose up --build -d
+
+Swagger UI will be available at: `http://localhost:5000/swagger`
+
+3. Or build and run locally:
+bash
+dotnet restore
+dotnet build -c Release
+dotnet test -c Release --verbosity normal
 dotnet run --project BSL.App
-```
 
-## Testing & Load Simulation
-The project includes a comprehensive suite of unit tests to validate the business logic and the mathematical models.
 
-To prove the efficiency of the IFS-Predictor and KKT-Eviction algorithms under high-load scenarios, **k6** is utilized.
+---
 
-Run the load test using the provided script:
-```bash
+## Load Simulation (k6)
+
+To execute the self-similar fractal load scenario and observe the Thundering Herd suppression:
+
+bash
 k6 run BSL.Test/loadtest.js
-```
-*The load tests simulate self-similar traffic bursts to trigger the predictive prefetching and monitor the cache hit/miss ratio under constrained memory.*
