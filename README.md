@@ -1,4 +1,4 @@
-# BSL (Book & Serials Library) — Highload Caching Optimization Engine
+﻿# BSL (Book & Serials Library) — Highload Caching Optimization Engine
 
 [![CI/CD Pipeline](https://github.com/DPazY/BSL/actions/workflows/ci.yml/badge.svg)](https://github.com/DPazY/BSL/actions/workflows/ci.yml)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)
@@ -109,7 +109,7 @@ docker compose up -d --build
 ```
 
 3. Откройте сервисы в браузере:
-   * **BSL Studio Control Plane:** [http://localhost:3000](http://localhost:3000)
+   * **BSL Studio Control Plane:** [http://localhost:3080](http://localhost:3080)
    * **Swagger UI (OpenAPI документация):** [http://localhost:5000/swagger](http://localhost:5000/swagger)
    * **Health Check эндпоинт:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
    * **PostgreSQL 16:** `localhost:5432` (БД: `bsl_db`, пользователь: `postgres`, пароль: `postgres_password`)
@@ -153,7 +153,7 @@ dotnet test --configuration Release
 Запуск нагрузочного сценария `k6` (самоподобный трафик Парето/Ципфа до 200 виртуальных пользователей):
 
 ```bash
-k6 run load-tests/ifs-stress.js
+k6 run BSL.Test/loadtest.js
 ```
 
 ---

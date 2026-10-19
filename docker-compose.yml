@@ -49,7 +49,7 @@ services:
     depends_on:
       - bsl-app
     ports:
-      - "3000:80"
+      - "3080:80"
 
 volumes:
   postgres_data:

@@ -7,7 +7,6 @@
   <Project Path="BSL.Models/BSL.Models.csproj" />
   <Project Path="BSL.Security/BSL.Security.csproj" />
   <Project Path="BSL.Test/BSL.Test.csproj" />
-  <Project Path="BSL.Web/BSL.Web.csproj" />
   <Project Path="docker-compose.dcproj">
     <Build />
   </Project>
