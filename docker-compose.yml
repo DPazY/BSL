@@ -18,12 +18,11 @@ services:
       timeout: 5s
       retries: 5
 
-  bsl.web:
-    image: ${DOCKER_REGISTRY-}bslweb
-    container_name: bsl-web
+  bsl-app:
+    container_name: bsl-app
     build:
       context: .
-      dockerfile: BSL.Web/Dockerfile
+      dockerfile: BSL.App/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -32,8 +31,27 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
-      - AppSettings__ConnectionString=Host=postgres;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionString=Host=postgres;Port=5432;Database=bsl_db;Username=postgres;Password=postgres_password
+      - WorkDir=/app/data
+      - FileWatcher=/app/watch
+      - ProcessedFile=None
+    volumes:
+      - bsl_watch:/app/watch
+      - bsl_data:/app/data
+
+  bsl-ui:
+    container_name: bsl-ui
+    build:
+      context: ./bsl-ui
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - bsl-app
+    ports:
+      - "3000:80"
 
 volumes:
   postgres_data:
+  bsl_watch:
+  bsl_data:

@@ -1,6 +1,5 @@
 ﻿using BSL.Models;
 using BSL.Models.Interface;
-using Microsoft.Extensions.Options;
 
 namespace BSL.App.Service
 {

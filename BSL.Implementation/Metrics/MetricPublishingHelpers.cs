@@ -3,7 +3,7 @@ using OpenTelemetry.Metrics;
 
 namespace BSL.Implementation.Metrics
 {
-    public class MetricPublisihingHelpers
+    public class MetricPublishingHelpers
     {
         public static MeterProvider GetMeterProvider(string meterName, string endpointUri)
         {

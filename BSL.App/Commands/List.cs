@@ -14,16 +14,15 @@ namespace BSL.App.Commands
     {
         [Required]
         [Argument(0, "outFile", Description = "Path to save the filtered dump")]
-        public string OutFile { get; set; }
+        public string OutFile { get; set; } = string.Empty;
 
         [Option("-a|--author", Description = "Search books by author")]
-        public string Author { get; set; }
+        public string Author { get; set; } = string.Empty;
 
         [Option("-p|--publisher", Description = "Search books by publisher")]
-        public string Publisher { get; set; }
-
+        public string Publisher { get; set; } = string.Empty;
         [Option("-t|--name", Description = "Search books by name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         public async Task OnExecuteAsync()
         {
