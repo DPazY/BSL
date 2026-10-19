@@ -1,6 +1,5 @@
 using BSL.Models.Interface;
 using McMaster.Extensions.CommandLineUtils;
-using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 
 namespace BSL.App.Commands

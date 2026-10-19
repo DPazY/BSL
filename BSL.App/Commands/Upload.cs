@@ -1,5 +1,4 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
-using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 
@@ -12,24 +11,24 @@ namespace BSL.App.Commands
     {
         [Argument(0, "inFile", Description = "File to upload")]
         [Required(ErrorMessage = "Argument {0} is required")]
-        public string inFile { get; set; }
+        public string InFile { get; set; } = string.Empty;
 
         // Поменяли сигнатуру на async Task OnExecuteAsync
         public async Task OnExecuteAsync()
         {
-            logger.LogDebug($"Starting upload from {inFile}");
+            logger.LogDebug($"Starting upload from {InFile}");
 
             using var client = new HttpClient();
             client.BaseAddress = new Uri("http://localhost:5000");
 
             using var multipartFormContent = new MultipartFormDataContent();
 
-            using (Stream stream = new FileStream(inFile, FileMode.Open))
+            using (Stream stream = new FileStream(InFile, FileMode.Open))
             {
                 var fileStreamContent = new StreamContent(stream);
                 fileStreamContent.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
 
-                multipartFormContent.Add(fileStreamContent, name: "formFile", fileName: Path.GetFileName(inFile));
+                multipartFormContent.Add(fileStreamContent, name: "formFile", fileName: Path.GetFileName(InFile));
 
                 logger.LogDebug("Sending file to server...");
 

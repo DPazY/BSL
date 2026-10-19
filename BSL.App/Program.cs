@@ -1,143 +1,206 @@
-﻿using BSL.App;
+﻿using System.IO.Abstractions;
+using BSL.App.Endpoints;
+using BSL.App.Infrastructure;
 using BSL.App.Service;
 using BSL.Implementation;
 using BSL.Implementation.Metrics;
 using BSL.Implementation.Repository;
 using BSL.Implementation.SerializerStrategy;
 using BSL.Implementation.Service;
+using BSL.Implementation.Validator;
 using BSL.Models;
 using BSL.Models.Enum;
 using BSL.Models.Interface;
+using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Hosting.Systemd;
 using Microsoft.Extensions.Hosting.WindowsServices;
-using System.IO.Abstractions;
 
-internal class Program
+namespace BSL.App;
+
+public class Program
 {
-    async private static Task Main(string[] args)
+    public static async Task Main(string[] args)
     {
         bool isWebMode = args.Contains("--web");
+        string[] appArgs = args.Where(a => a != "--web").ToArray();
 
-        var appArgs = args.Where(a => a != "--web").ToArray();
-
-        var configurationBuilder = new ConfigurationBuilder();
-
-        configurationBuilder
-            .AddInMemoryCollection(
-            new Dictionary<string, string?>
+        // 1. Собираем конфигурацию с безопасными дефолтами
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["WorkDir"] = Environment.CurrentDirectory,
                 ["FileWatcher"] = Environment.CurrentDirectory,
                 ["ProcessedFile"] = "None"
             })
-            .AddUserSecrets<Program>();
-
-
-        configurationBuilder.AddJsonFile("AppConfig.json");
-
-        var configuration = configurationBuilder.Build();
-
-        var workdir =
-            configuration.GetSection("WorkDir").Value;
-        var fileWatcher = configuration.GetSection("FileWatcher").Value;
-        ProcessedFileAction processedFile = Enum.Parse<ProcessedFileAction>(configuration.GetSection("ProcessedFile").Value);
-
-        var host = Host.CreateDefaultBuilder();
-
-        if (appArgs.Length > 0)
-            host.UseCommandLineApplication<App>(appArgs);
-
-        var hostBuilded = host
-            .ConfigureServices(serviceCollection =>
-            {
-                serviceCollection.AddSingleton<IBookService, BookService>();
-                if (isWebMode)
-                {
-                    serviceCollection.AddHttpClient("BslWebClient", client =>
-                    {
-                        client.BaseAddress = new Uri("http://localhost:5155");
-                        client.DefaultRequestHeaders.Add("X-API-Key", "b3c29924-814d-4876-80db-f9540b6e92b5");
-                    });
-
-                    serviceCollection.AddSingleton<IXmlService, WebXmlService>();
-                    Console.WriteLine("[System] Запуск в WEB режиме...");
-                }
-                else
-                {
-                    serviceCollection.AddSingleton<IXmlService, BookXmlService>();
-                    Console.WriteLine("[System] Запуск в ЛОКАЛЬНОМ режиме...");
-                }
-                serviceCollection.AddSingleton(new AppSettings(workdir, fileWatcher, processedFile));
-                serviceCollection.AddSingleton<ISerializerStrategy, XmlSerializerStrategy>();
-                serviceCollection.AddSingleton<IFileSystem>(provider =>
-                {
-                    return new FileSystem();
-                });
-
-                serviceCollection.AddMetrics();
-                serviceCollection.AddSingleton<AppMetrics>();
-
-                serviceCollection.AddSingleton<ITelemetryAggregator, TelemetryAggregator>();
-                serviceCollection.AddSingleton<IIfsPredictor, IfsPredictor>();
-
-                Dapper.SqlMapper.AddTypeHandler(new StringListTypeHandler());
-                Dapper.SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
-
-                serviceCollection.AddSingleton<IRepository>(provider =>
-                {
-                    string connectionString = configuration["ConnectionString"];
-
-                    var appMetrics = provider.GetRequiredService<AppMetrics>();
-                    var telemetryAggregator = provider.GetRequiredService<ITelemetryAggregator>();
-
-                    var postgresRepository = new PostgresRepository(connectionString);
-
-                    var cachedRepository = new CachedRepository(postgresRepository);
-                    var lruCachedRepository = new LruCachedRepository(postgresRepository, 100);
-
-                    long cacheMemoryLimitBytes = 100 * 1024;
-
-                    var ifsCachedRepository = new IfsCachedRepository(
-                        postgresRepository,
-                        telemetryAggregator,
-                        cacheMemoryLimitBytes);
-                    var metricsRepository = new MetricsRepository(ifsCachedRepository, appMetrics);
-                    //var metricsRepository = new MetricsRepository(lruCachedRepository, appMetrics);
-
-                    return metricsRepository;
-                });
-
-
-                if (appArgs.Length == 0)
-                {
-                    serviceCollection.AddHostedService<IfsBackgroundPrefetcher>();
-                    serviceCollection.AddHostedService<FileWatcher>();
-                    serviceCollection.AddHostedService<BookProcessor>();
-                    serviceCollection.AddSingleton<FileProcessingQueue>();
-
-                    if (WindowsServiceHelpers.IsWindowsService())
-                        serviceCollection.AddWindowsService();
-                    else if (SystemdHelpers.IsSystemdService())
-                        serviceCollection.AddSystemd();
-                }
-            })
-            .ConfigureLogging(loggingBuilder =>
-            {
-                loggingBuilder.AddConsole();
-                loggingBuilder.SetMinimumLevel(LogLevel.Information);
-            })
+            .AddUserSecrets<Program>()
+            .AddJsonFile("AppConfig.json", optional: true, reloadOnChange: true)
             .Build();
 
+        string workdir = configuration.GetSection("WorkDir").Value ?? Environment.CurrentDirectory;
+        string fileWatcher = configuration.GetSection("FileWatcher").Value ?? Environment.CurrentDirectory;
+        string processedFileRaw = configuration.GetSection("ProcessedFile").Value ?? "None";
+        ProcessedFileAction processedFile = Enum.TryParse<ProcessedFileAction>(processedFileRaw, true, out var parsedAction)
+            ? parsedAction
+            : ProcessedFileAction.None;
+
+        // Регистрируем Dapper TypeHandlers
+        Dapper.SqlMapper.AddTypeHandler(new StringListTypeHandler());
+        Dapper.SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+
+        // СЦЕНАРИЙ А: Если переданы аргументы командной строки -> запускаем CLI режим через McMaster DI
         if (appArgs.Length > 0)
         {
-            await hostBuilded.RunCommandLineApplicationAsync();
+            var services = new ServiceCollection();
+            ConfigureCoreServices(services, configuration, workdir, fileWatcher, processedFile, isWebMode);
+            services.AddLogging(logging =>
+            {
+                logging.AddConsole();
+                logging.SetMinimumLevel(LogLevel.Information);
+            });
+
+            await using var serviceProvider = services.BuildServiceProvider();
+
+            var appCli = new CommandLineApplication<App>();
+            appCli.Conventions
+                .UseDefaultConventions()
+                .UseConstructorInjection(serviceProvider);
+
+            await appCli.ExecuteAsync(appArgs);
+            return;
+        }
+
+        // СЦЕНАРИЙ Б: Запуск полноценного Web API хоста + фоновых служб
+        var builder = WebApplication.CreateBuilder(args);
+
+        builder.Configuration.AddConfiguration(configuration);
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
+        builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+        // Регистрируем общие доменные сервисы, кэши и репозитории
+        ConfigureCoreServices(builder.Services, configuration, workdir, fileWatcher, processedFile, isWebMode);
+
+        // Регистрируем фоновые воркеры
+        builder.Services.AddSingleton<FileProcessingQueue>();
+        builder.Services.AddHostedService<IfsBackgroundPrefetcher>();
+        builder.Services.AddHostedService<FileWatcher>();
+        builder.Services.AddHostedService<BookProcessor>();
+
+        if (WindowsServiceHelpers.IsWindowsService())
+            builder.Services.AddWindowsService();
+        else if (SystemdHelpers.IsSystemdService())
+            builder.Services.AddSystemd();
+
+        // Инфраструктура Web API: Swagger, ProblemDetails и CORS для React UI (bsl-ui)
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+        builder.Services.AddProblemDetails();
+        builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .WithExposedHeaders("X-Execution-Time-Ms", "X-Data-Source"));
+        });
+
+        var app = builder.Build();
+
+        app.UseExceptionHandler();
+        app.UseCors("AllowFrontend");
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
+        // Health-check эндпоинт
+        app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Mode = "Web API" }))
+           .WithTags("System");
+
+        app.MapCatalogEndpoints();
+        app.MapCacheEndpoints();
+        app.MapIngestionEndpoints();
+
+        using var meterProvider = MetricPublishingHelpers
+            .GetMeterProvider(AppMetrics.MeterName, "http://localhost:9184/");
+
+        await app.RunAsync();
+    }
+
+    private static void ConfigureCoreServices(
+        IServiceCollection services,
+        IConfiguration configuration,
+        string workdir,
+        string fileWatcher,
+        ProcessedFileAction processedFile,
+        bool isWebMode)
+    {
+        services.AddSingleton<IBookService, BookService>();
+        services.AddSingleton<INewspaperService, NewspaperService>();
+        services.AddSingleton<IPatentService, PatentService>();
+        services.AddSingleton<IEditionService, EditionService>();
+
+        services.AddSingleton<BookValidator>();
+        services.AddSingleton<NewspaperValidator>();
+        services.AddSingleton<PatentValidator>();
+        services.AddSingleton<EditionValidator>();
+
+        if (isWebMode)
+        {
+            services.AddHttpClient("BslWebClient", client =>
+            {
+                client.BaseAddress = new Uri("http://localhost:5155");
+                client.DefaultRequestHeaders.Add("X-API-Key", "b3c29924-814d-4876-80db-f9540b6e92b5");
+            });
+
+            services.AddSingleton<IXmlService, WebXmlService>();
+            Console.WriteLine("[System] Запуск в WEB режиме...");
         }
         else
         {
-            using var meterProvider = MetricPublisihingHelpers
-                .GetMeterProvider(AppMetrics.MeterName, "http://localhost:9184/");
-
-            await hostBuilded.RunAsync();
+            services.AddSingleton<IXmlService, BookXmlService>();
+            Console.WriteLine("[System] Запуск в ЛОКАЛЬНОМ режиме...");
         }
+
+        services.AddSingleton(new AppSettings(workdir, fileWatcher, processedFile));
+
+        services.AddSingleton<ISerializerStrategy, XmlSerializerStrategy>();
+        services.AddSingleton<XmlSerializerStrategy>();
+        services.AddSingleton<JsonSerializerStrategy>();
+        services.AddSingleton<ProtobufSerializerStrategy>();
+
+        services.AddSingleton<IFileSystem>(_ => new FileSystem());
+
+        services.AddMetrics();
+        services.AddSingleton<AppMetrics>();
+        services.AddSingleton<ITelemetryAggregator, TelemetryAggregator>();
+        services.AddSingleton<IIfsPredictor, IfsPredictor>();
+
+        services.AddSingleton<PostgresRepository>(_ =>
+        {
+            string connectionString = configuration["ConnectionString"] ?? string.Empty;
+            return new PostgresRepository(connectionString);
+        });
+
+        services.AddSingleton<LruCachedRepository>(provider =>
+        {
+            var postgres = provider.GetRequiredService<PostgresRepository>();
+            return new LruCachedRepository(postgres, 100);
+        });
+
+        services.AddSingleton<IfsCachedRepository>(provider =>
+        {
+            var postgres = provider.GetRequiredService<PostgresRepository>();
+            var telemetryAggregator = provider.GetRequiredService<ITelemetryAggregator>();
+            long cacheMemoryLimitBytes = 100 * 1024;
+            return new IfsCachedRepository(postgres, telemetryAggregator, cacheMemoryLimitBytes);
+        });
+
+        services.AddSingleton<IRepository>(provider =>
+        {
+            var ifsCachedRepository = provider.GetRequiredService<IfsCachedRepository>();
+            var appMetrics = provider.GetRequiredService<AppMetrics>();
+            return new MetricsRepository(ifsCachedRepository, appMetrics);
+        });
     }
 }

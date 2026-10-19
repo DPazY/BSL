@@ -1,29 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <UserSecretsId>ad37cafb-f6eb-4f86-802a-8e5cd8c23320</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UserSecretsId>ce16be3e-9d06-4021-8d07-83db69238739</UserSecretsId>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.Hosting.CommandLine" Version="5.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.11" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.11" />
-    <PackageReference Include="OpenTelemetry.Api" Version="1.18.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<!-- Системные службы Windows и Linux -->
+		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.13" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.13" />
 
-  <ItemGroup>
-    <ProjectReference Include="..\BSL.Implementation\BSL.Implementation.csproj" />
-    <ProjectReference Include="..\BSL.Models\BSL.Models.csproj" />
-  </ItemGroup>
+		<!-- CLI: Библиотека McMaster -->
+		<PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
 
-  <ItemGroup>
-    <None Update="AppConfig.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+		<!-- Валидация -->
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.24.2-preview.1" />
+
+		<!-- Swagger UI и генератор документации (без конфликта Microsoft.OpenApi) -->
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+
+		<!-- Файловая система -->
+		<PackageReference Include="System.IO.Abstractions" Version="22.2.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\BSL.Implementation\BSL.Implementation.csproj" />
+		<ProjectReference Include="..\BSL.Models\BSL.Models.csproj" />
+		<ProjectReference Include="..\BSL.Security\BSL.Security.csproj" />
+	</ItemGroup>
 
 </Project>

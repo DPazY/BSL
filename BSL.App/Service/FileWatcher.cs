@@ -1,6 +1,4 @@
 using BSL.Models;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace BSL.App.Service
 {
@@ -19,7 +17,7 @@ namespace BSL.App.Service
                 Directory.CreateDirectory(inDirectory);
 
             watcher.Path = inDirectory;
-            logger.LogInformation($"Начинаю слушать папку: {watcher.Path}"); 
+            logger.LogInformation($"Начинаю слушать папку: {watcher.Path}");
             watcher.Filter = "*.*";
 
             watcher.Created += FileCreated;
