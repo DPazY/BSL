@@ -1,118 +1,103 @@
-﻿# BSL (Book & Serials Library) — Highload Caching Optimization Engine
+# BSL (Book & Serials Library)
 
 [![CI/CD Pipeline](https://github.com/DPazY/BSL/actions/workflows/ci.yml/badge.svg)](https://github.com/DPazY/BSL/actions/workflows/ci.yml)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)
-![C#](https://img.shields.io/badge/C%23-13.0-239120?style=flat-square&logo=c-sharp)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)
-![k6](https://img.shields.io/badge/k6-Load_Testing-7D64FF?style=flat-square&logo=k6&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)
 
-## About
-# BSL — Высокопроизводительный сервис каталога изданий с предиктивным IFS-кэшированием
+Учебный pet-проект: REST-сервис каталога изданий (книги, газеты, патенты) на ASP.NET Core Minimal APIs с in-memory кэширующим слоем поверх PostgreSQL/Dapper и фоновым конвейером импорта файлов.
 
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](https://opensource.org/licenses/MIT)
-
-**BSL (Book Storage Library)** — распределённый веб-сервис управления каталогом печатных и электронных изданий (книги, газеты, патенты), оснащённый **предиктивным кэшем на базе систем итерируемых функций (IFS)** с оптимизацией вытеснения по условиям Каруша — Куна — Таккера (ККТ) и реактивным конвейером потоковой загрузки данных.
-
-Проект разработан на стыке теории динамических систем и системного программирования: система предотвращает лавинообразные промахи кэша (*Thundering Herd*) и минимизирует хвостовую задержку ($p_{95}$) при самоподобных нагрузках с тяжёлыми хвостами.
+Это не продакшн-система: кэш локален для одного экземпляра сервиса, аутентификация — простой API-ключ, конфигурация рассчитана на запуск в Docker Compose на localhost.
 
 ---
 
-## Ключевые инженерные и архитектурные решения
+## Что реализовано
 
-### 1. Предиктивное кэширование (`IfsCachedRepository` + ККТ) и Lock-Free синхронизация
-* **Математическая модель трафика:** вместо реактивного вытеснения по давности использования (LRU), система моделирует поток обращений как самоподобный процесс (распределения Ципфа и Парето) и вычисляет вероятностный аттрактор методом систем итерируемых функций (IFS).
-* **Оптимизация вытеснения через ККТ:** при заполнении кэша задача отбора ключей для сохранения и вытеснения решается через лагранжиан и условия Каруша — Куна — Таккера (ККТ), что снижает сквозную хвостовую задержку $p_{95}$ в **12 раз** (до $40\text{ мс}$ при $200\text{ VU}$ в тестах `k6`).
-* **Неблокирующий пересчёт весов (Lock-Free / CAS):** обновление весов популярности и экспоненциального затухания выполняется без блокировок потоков с помощью `Interlocked.CompareExchange`, исключая простой рабочего пула при пиковых нагрузках.
-* **Прозрачное декорирование DAL:** кэширующий слой и сборщик метрик реализованы через паттерн **Decorator** поверх репозиториев Dapper (`IRepository<T>`) и снабжают HTTP-ответы сквозными заголовками телеметрии `X-Data-Source` (`IFS-Cache` / `PostgreSQL`) и `X-Execution-Time-Ms`.
+### 1. Кэширующий декоратор репозитория (`IfsCachedRepository`)
 
-### 2. Реактивный конвейер потоковой загрузки (`FileWatcher` + `BackgroundService`)
-* **Асинхронная обработка пакетов:** фоновый сервис отслеживает директорию `/app/watch` с помощью `FileSystemWatcher`, а также принимает файлы через `multipart/form-data` REST-эндпоинт `/api/v1/ingestion/upload`.
-* **Потокобезопасная очередь и PeriodicTimer:** поступившие пакеты ставятся в неблокирующую очередь `FileProcessingQueue` и асинхронно импортируются в PostgreSQL без блокировки пула потоков веб-сервера. Упреждающий прогрев кэша (`IfsBackgroundPrefetcher`) работает на базе асинхронного `PeriodicTimer` с защитой от наложения тактов (*overlapping*).
-* **Взаимозаменяемая сериализация (Strategy):** нормализация и парсинг разнородных потоков данных (`Protobuf`, `JSON`, `XML`, `CSV`) изолированы через паттерн **Strategy** с последующей пакетной записью в СУБД и кастомными `SqlMapper.TypeHandler` в Dapper (`DateOnly`, массивы `text[]`).
+* Паттерн **Decorator** поверх `IRepository<T>` (Dapper + PostgreSQL): HTTP-слой ничего не знает о кэше.
+* При промахе данные читаются из БД, размер объекта оценивается через `ObjectSizeApproximator`, и при превышении лимита памяти выполняется вытеснение.
+* **Cost-aware вытеснение:** каждый элемент получает вес по экспоненциально затухающей интенсивности обращений (EWMA, период полураспада 60 с); очередь вытеснения — `PriorityQueue`, переоценка веса — ленивая (при депайке). Это эвристика «похожая на LFU/LRU-K», а не точное решение задачи оптимизации.
+* Атомарные счётчики (`Interlocked`) для учёта занятой памяти и обновления весов; блокировка только на самой очереди вытеснения.
+* Сквозные заголовки телеметрии у HTTP-ответов: `X-Data-Source` (`IFS-Cache` / `PostgreSQL`) и `X-Execution-Time-Ms`.
+* Есть также базовый `LruCachedRepository` — он используется как контрольная точка в бенчмарке ниже.
+* Ограничение моделирования: единый `SemaphoreSlim(1,1)` в `CachedRepository` сериализует обращения при промахе, но полной защиты от thundering herd (single-flight на ключ) сейчас нет.
 
-### 3. Интерактивная панель управления (`BSL Studio Control Plane`)
-* Веб-интерфейс для мониторинга и профилирования в реальном времени: позволяет инспектировать карточки изданий, отслеживать источник каждого ответа (`IFS-Cache` или `PostgreSQL`), запускать сравнительный стресс-тест **IFS vs LRU** на синтетическом трафике Ципфа с визуализацией перцентилей $p_{50}$ / $p_{95}$ и отправлять пакеты данных в конвейер `FileWatcher`.
+### 2. Фоновый конвейер загрузки (`FileWatcher` + `BackgroundService`)
+
+* `FileSystemWatcher` следит за смонтированной директорией внутри контейнера, плюс REST-эндпоинт `POST /api/v1/ingestion/upload` принимает файлы (`multipart/form-data`).
+* Пакеты попадают в потокобезопасную очередь `FileProcessingQueue` и импортируются в PostgreSQL асинхронно, вне пула потоков веб-сервера.
+* Сериализация через паттерн **Strategy**: `XmlSerializerStrategy`, `JsonSerializerStrategy`, `ProtobufSerializerStrategy` (CSV упоминается в summary эндпоинта, отдельной стратегии пока нет).
+* Кастомные `SqlMapper.TypeHandler` для Dapper: `DateOnly`, `text[]`.
+* `IfsBackgroundPrefetcher` — фоновый сервис прогрева кэша на `PeriodicTimer` с защитой от наложения тактов.
+
+### 3. Панель управления (`bsl-ui`)
+
+React + TypeScript + Vite + Tailwind, раздаётся через Nginx (reverse proxy на API):
+
+* карточки изданий и источник каждого ответа (`X-Data-Source`);
+* сравнительный тест кэшей через `POST /api/v1/cache/benchmark`;
+* загрузка файлов в конвейер.
+
+### Бенчмарк IFS vs LRU
+
+`POST /api/v1/cache/benchmark` прогоняет синтетический трафик (распределение Ципфа) против `IfsCachedRepository` и `LruCachedRepository` и возвращает `p50`, `p95`, `TotalMs`, `SpeedupFactor`. Это in-process замер на одном экземпляре, а не распределённый нагрузочный тест; абсолютные цифры зависят от машины.
+
+Нагрузочный сценарий k6 (`BSL.Test/loadtest.js`) поднимает до 200 виртуальных пользователей с самоподобным трафиком — для проверки поведения кэша и GC под нагрузкой.
 
 ---
 
-## Архитектура системы
+## Архитектура
 
 ```text
 +-----------------------------------------------------------------------+
 |                        Docker Compose Network                         |
 |                                                                       |
 |  +-----------------------+         /api/*          +---------------+  |
-|  |     bsl-ui (:3000)    | ----------------------> | bsl-app (:8080|  |
+|  |     bsl-ui (:3080)    | ----------------------> | bsl-app (:5000|  |
 |  |   Control Plane UI    | <---------------------- |  .NET 10 API  |  |
 |  |   Nginx Reverse Proxy |   X-Data-Source Header  +-------+-------+  |
 |  +-----------------------+                                 |          |
 |                                                            |          |
-|         +--------------------------------------------------+          |
-|         |                                                  |          |
-|         v                                                  v          |
-|  +-----------------------------+            +----------------------+  |
-|  |  IfsCachedRepository<T>     |            |  FileWatcher Service |  |
-|  |  - IFS Attractor Warmup     |            |  - /app/watch Volume |  |
-|  |  - KKT Eviction Optimizer   |            |  - Concurrent Queue  |  |
-|  |  - Lock-Free CAS Weights    |            |  - XML/CSV/JSON/Proto|  |
-|  +--------------+--------------+            +-----------+----------+  |
-|                 |                                       |             |
-|                 +-------------------+-------------------+             |
-|                                     | Dapper Async SQL                |
-|                                     v                                 |
-|                          +---------------------+                      |
-|                          | bsl-postgres (:5432)|                      |
-|                          |  PostgreSQL 16 DB   |                      |
-|                          +---------------------+                      |
+|                 +--------------------------+---------------+          |
+|                 |                          |                           |
+|                 v                          v                           |
+|  +-----------------------------+  +----------------------+            |
+|  |  IfsCachedRepository        |  |  FileWatcher Service |            |
+|  |  - EWMA weights (decay)     |  |  - watch directory   |            |
+|  |  - PriorityQueue eviction   |  |  - Concurrent Queue  |            |
+|  |  - Interlocked counters     |  |  - XML/JSON/Proto    |            |
+|  +--------------+--------------+  +-----------+----------+            |
+|                 |                             |                        |
+|                 +--------------+--------------+                        |
+|                                | Dapper Async SQL                     |
+|                                v                                      |
+|                     +---------------------+                           |
+|                     | bsl-postgres (:5432)|                           |
+|                     +---------------------+                           |
 +-----------------------------------------------------------------------+
 ```
 
 ---
 
-## Математическая модель IFS-кэша
-
-Для каждого ключа $i \in \{1, \dots, N\}$ при поступлении обращения $r_k$ выполняется сжимающее аффинное отображение весового коэффициента популярности:
-
-$$
-w_i^{(k+1)} = \gamma \cdot w_i^{(k)} + (1 - \gamma) \cdot \mathbb{I}(r_k = i), \quad \gamma \in (0, 1)
-$$
-
-При необходимости вытеснения элементов из кэша ограниченной ёмкости $C$ решается задача максимизации суммарной полезности с ограничениями в форме условий Каруша — Куна — Таккера (ККТ):
-
-$$
-\max_{x \in [0, 1]^N} \sum_{i=1}^{N} u_i(w_i, s_i) x_i \quad \text{при условии} \quad \sum_{i=1}^{N} s_i x_i \le C
-$$
-
-где $u_i$ — оценка вероятности повторного обращения на неподвижной точке аттрактора IFS, а $s_i$ — стоимость хранения объекта в памяти.
-
----
-
 ## Быстрый старт (Docker Compose)
 
-Для запуска всей инфраструктуры (PostgreSQL 16 с автоинициализацией схемы, сервис .NET 10 API и панель управления) требуется только установленный **Docker Desktop**.
-
-1. Склонируйте репозиторий и перейдите в корневую директорию:
+Нужен только установленный Docker.
 
 ```bash
 git clone https://github.com/DPazY/BSL.git
 cd BSL
-```
-
-2. Соберите и запустите контейнеры одной командой:
-
-```bash
 docker compose up -d --build
 ```
 
-3. Откройте сервисы в браузере:
-   * **BSL Studio Control Plane:** [http://localhost:3080](http://localhost:3080)
-   * **Swagger UI (OpenAPI документация):** [http://localhost:5000/swagger](http://localhost:5000/swagger)
-   * **Health Check эндпоинт:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
-   * **PostgreSQL 16:** `localhost:5432` (БД: `bsl_db`, пользователь: `postgres`, пароль: `postgres_password`)
+После запуска:
+
+* **UI:** http://localhost:3080
+* **Swagger UI:** http://localhost:5000/swagger
+* **Health check:** http://localhost:5000/api/health
+* **PostgreSQL:** `localhost:5432` (БД `bsl_db`)
+
+> Пароль БД в `docker-compose.yml`/`init.sql` — плейсхолдер для локальной разработки. Для любого окружения вне localhost вынесите его в переменные окружения (`.env`), а `ApiKeyMiddleware` требует заголовок `X-API-Key`.
 
 ---
 
@@ -120,41 +105,47 @@ docker compose up -d --build
 
 | Метод | Маршрут | Описание |
 | :--- | :--- | :--- |
-| `GET` | `/api/v1/catalog/books` | Пагинированный поиск книг с фильтрацией по автору, префиксу издательства и сортировкой по году (`Asc` / `Desc`) |
-| `GET` | `/api/v1/catalog/books/{name}` | Точечное получение книги через `IfsCachedRepository` с заголовками телеметрии `X-Data-Source` и `X-Execution-Time-Ms` |
-| `GET` | `/api/v1/catalog/newspapers` | Получение списка периодических изданий (газет) из каталога |
-| `GET` | `/api/v1/catalog/patents` | Получение списка патентов из каталога |
-| `POST` | `/api/v1/cache/warmup` | Упреждающий прогрев кэша путём расчёта неподвижной точки аттрактора IFS |
-| `POST` | `/api/v1/cache/benchmark` | Сравнительный стресс-тест `IFS vs LRU` на синтетическом трафике Ципфа (возвращает $p_{50}$, $p_{95}$, `TotalMs` и `SpeedupFactor`) |
-| `POST` | `/api/v1/ingestion/upload` | Потоковая загрузка `XML` / `CSV` пакетов напрямую в директорию реактивного конвейера `FileWatcher` |
-| `GET` | `/api/health` | Проверка работоспособности веб-сервиса и доступности пула соединений PostgreSQL |
+| `GET` | `/api/v1/catalog/books` | Пагинированный поиск книг: фильтр по автору, префиксу издательства, сортировка по году |
+| `GET` | `/api/v1/catalog/books/{name}` | Точечное получение книги через кэш; заголовки `X-Data-Source`, `X-Execution-Time-Ms` |
+| `GET` | `/api/v1/catalog/newspapers` | Список периодических изданий |
+| `GET` | `/api/v1/catalog/patents` | Список патентов |
+| `POST` | `/api/v1/cache/warmup` | Прогрев кэша по топ-ключам текущей телеметрии |
+| `POST` | `/api/v1/cache/benchmark` | Сравнение `IFS vs LRU` на синтетическом трафике Ципфа (`p50`, `p95`, `TotalMs`, `SpeedupFactor`) |
+| `POST` | `/api/v1/ingestion/upload` | Загрузка файла (XML/JSON/Protobuf) в конвейер обработки |
+| `GET` | `/api/health` | Проверка веб-сервиса и доступности пула соединений PostgreSQL |
 
 ---
 
 ## Структура решения
 
-* **`BSL.App`** — серверное приложение на ASP.NET Core Minimal APIs (.NET 10), конфигурация DI-контейнера, глобальная обработка исключений в стандарте RFC 7807 (`ProblemDetails`), фоновые службы `BackgroundService` и OpenAPI/Swagger.
-* **`BSL.Implementation`** — доменная логика, асинхронные репозитории Dapper + PostgreSQL, кастомные `SqlMapper.TypeHandler`, реализация `IfsCachedRepository`, `LruCache`, `MetricsRepository`, стратегии сериализации и очереди обработки файлов.
-* **`BSL.Models`** — доменные модели (`Book`, `Newspaper`, `Patent`, `Edition`), DTO и контракты уровня доступа к данным (`IRepository<T>`).
-* **`BSL.Security`** — middleware аутентификации (`ApiKeyMiddleware`) и компоненты разграничения доступа.
-* **`BSL.Test`** — 69 модульных и интеграционных тестов (NUnit, Moq), проверяющих корректность алгоритмов вытеснения, валидаторов, парсеров и работы с БД.
-* **`bsl-ui`** — интерактивная панель управления и профилирования кэша (React, TypeScript, Vite, Tailwind CSS, Nginx).
+* **`BSL.App`** — ASP.NET Core Minimal APIs (.NET 10): DI-контейнер, `ProblemDetails` (RFC 7807), фоновые службы, OpenAPI/Swagger.
+* **`BSL.Implementation`** — доменная логика: репозитории Dapper + PostgreSQL, `IfsCachedRepository`, `LruCachedRepository`, `MetricsRepository`, стратегии сериализации, очередь файлов, валидаторы.
+* **`BSL.Models`** — доменные модели (`Book`, `Newspaper`, `Patent`, `Edition`), DTO, контракты (`IRepository<T>`).
+* **`BSL.Security`** — `ApiKeyMiddleware` (заголовок `X-API-Key`).
+* **`BSL.Test`** — модульные и интеграционные тесты (NUnit, Moq): алгоритмы вытеснения, валидаторы, парсеры, работа с БД + `loadtest.js` для k6.
+* **`bsl-ui`** — панель управления (React, TypeScript, Vite, Tailwind CSS, Nginx).
 
 ---
 
-## Запуск тестов и нагрузочного профилирования
-
-Запуск модульных и интеграционных тестов .NET:
+## Тесты и нагрузка
 
 ```bash
 dotnet test --configuration Release
 ```
 
-Запуск нагрузочного сценария `k6` (самоподобный трафик Парето/Ципфа до 200 виртуальных пользователей):
-
 ```bash
 k6 run BSL.Test/loadtest.js
 ```
+
+---
+
+## Известные ограничения (что можно улучшить)
+
+* Кэш in-memory и локален для экземпляра — при горизонтальном масштабировании нужны шардинг или внешний кэш (Redis); нет инвалидации при записи через конвейер импорта.
+* Нет single-flight защиты от thundering herd на уровне ключа.
+* `ObjectSizeApproximator` оценивает размер объекта приблизительно — точный учёт памяти в CLR невозможен без нативных хуков.
+* CSV-парсер заявлен в описании эндпоинта, но стратегия не реализована.
+* API-ключ хранится в конфигурации проекта; ротации и хранения в secrets-менеджере нет.
 
 ---
 
